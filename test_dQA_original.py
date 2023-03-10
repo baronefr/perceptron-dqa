@@ -1,7 +1,3 @@
-
-# dQA test --------------------
-# by Paolo, 9 mar 2023
-
 # %%
 import quimb.tensor as qtn
 
@@ -14,12 +10,12 @@ import os
 from datetime import datetime
 import pytz
 
-#os.system("rm -f events.log")
+os.system("rm -f events.log")
 
 # %%
 # parameters
 tau = 1000
-P = 100
+P = 1000
 dt = tau/P
 max_bond_dim = 10
 N = 21           # qubits (features) to simulate
@@ -199,13 +195,12 @@ for mu in range(N_csi):
 FoM_time.append(eps)
 
 for p in range(1,P+1):
-    print(p)
     for mu in range(N_csi):
 
         # apply Uz to psi and compress it
         Uz_p_mu_ = Uz_p_mu(N, d, p, mu, Uz_FT, patterns=csi_patterns)
         psi = Uz_p_mu_.apply(psi, compress=True, max_bond=max_bond_dim, method="svd").copy()
-
+    
     Ux_p_ = Ux_p(N, d, beta_p=(1-p/P)*dt)
     psi = Ux_p_.apply(psi).copy()
 
@@ -216,11 +211,9 @@ for p in range(1,P+1):
             eps += compute_energy_density(psi, Hz_mu_singleK(N, d, mu, k, fx_FT, csi_patterns))
     FoM_time.append(eps)
 
-    if(p % 5 == 0):
+    if(p % 25 == 0):
         nowtime = datetime.now(tz=pytz.timezone("Europe/Rome")).strftime("%d/%m/%Y %H:%M:%S")
         os.system(f"echo Finished iteration p={p} at {nowtime} >> events.log")
-
-# %%
 
 FoM_time = np.real_if_close(FoM_time)
 
@@ -228,5 +221,3 @@ FoM_time = np.real_if_close(FoM_time)
 # save results
 np.savetxt(f"eps_s_P{P}.txt", FoM_time)
 
-
-# %%

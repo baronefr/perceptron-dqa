@@ -1,0 +1,3 @@
+quimb
+opt_einsum
+autoray
