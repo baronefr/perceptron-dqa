@@ -5,9 +5,14 @@ external/*
 
 # test environments
 experiment/*
+myenv/*
+activate.sh
 
 # backups
 bak/*
 
 # tmp and cache
 __pycache__/*
+
+# external libraries
+lib/py_*
