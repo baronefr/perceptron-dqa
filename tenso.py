@@ -1,15 +1,25 @@
 import numpy as np
 import opt_einsum as oe
 import tensornetwork as tn
-
+import scipy
 
 
 
 
 def contract_mps_mpo_margin(state_site, operator_site):
+    #      @ -- a
+    #   x  |
+    #      O -- b
+    #      |                MPO = [(l),r,down,up]
+    #      y
     return oe.contract('ax,byx->aby', state_site, operator_site).reshape( (-1, state_site.shape[1]) )
 
 def contract_mps_mpo(state_site, operator_site):
+    #   a -- @ -- b
+    #        | c
+    #   i -- O -- j
+    #        |               
+    #        l
     return oe.contract('abc,ijlc->aibjl', state_site, operator_site).reshape( 
         (state_site.shape[0]*operator_site.shape[0], state_site.shape[1]*operator_site.shape[1], operator_site.shape[3])
     )
@@ -67,6 +77,7 @@ def left_canonicalize(mps, site : int, normalize : bool = True):
         this = this.reshape( (this.shape[0]*this.shape[1], this.shape[2]) ) # merge left and phys dim index
 
         isometry, rest = np.linalg.qr( this )
+        print( isometry.shape, rest.shape)
 
         if mode_swap:
             # revert the axis swap
@@ -199,6 +210,8 @@ def contract_mps_braket(bra, ket):
 
 
 
+
+
 def convert_mps_from_google(mpsg):
     N = len(mpsg.tensors)
 
@@ -228,158 +241,120 @@ def google_random_mps(N, bond_dim = 3, canon = None):
 
 
 
-def compression_sweep(mps, psi_opti, cache_right = None):
+def mpo_apply_compress_density_matrix(mps, mpo, max_bd):
+    """INCOMPLETE! Apply MPO to MPS with density matrix algo,
+    as described in https://tensornetwork.org/mps/algorithms/denmat_mpo_mps/
+    """
+
+    assert len(mps) == len(mpo)
+
+    def crop_svd(u,s,vh):
+        return u[:,:max_bd], s[:max_bd], vh[:max_bd,:], np.sum(s[:max_bd])/np.sum(s)
     
-    sweep_normalize_LR = True
+    def crop_svd_4D(u,s,vh):
+        return u[..., :max_bd], s[..., None, :], vh # TODO, what about vh?
 
-    N = len(mps)
-    
-    # caching first sweep from right
-    if cache_right is None:
-        R_cache = []
-        prev = None
-        first_site = True
+    first_site = True
+    LL = []
+    UPPER = []
 
-        for ii in reversed(range(2,N)):
-            if first_site:
-                #     mps*     (b)   == O
-                #                       | (x)
-                #     psi      (a)   -- r
-                prev = oe.contract('ax,bx->ab', psi_opti[ii], np.conj(mps[ii]) )
-                first_site = False
-            else:
-                #     mps*     (c)   == O ==   (d)           1  == @ ==  3
-                #                       | (x)            ->        @
-                #     psi      (a)   -- r --   (b)           0  -- @ --  2
-                tmp = oe.contract('abx,cdx->acbd', psi_opti[ii], np.conj(mps[ii]) )
-                #         c  == @ ==  y           (y)   == O
-                #               @         with             | (x)
-                #         a  -- @ --  x           (x)   -- r
-                prev = oe.contract('xy,acxy->ac', prev, tmp)
-            
-            #print('caching R site {} of size {}'.format(ii, prev.shape) )
-            if sweep_normalize_LR: prev = prev/np.linalg.norm(prev)
-            #print('INFO norm', np.linalg.norm(prev) )
-            R_cache.append( prev.copy() )
+    for ss, oo in zip( mps[:-1], mpo[:-1] ):
+        if first_site:
+            #         @ -- a
+            #      x  |
+            #         O -- b     =  upper
+            #         |
+            #         y
+            upper = oe.contract('ax,byx->aby', ss, oo )
+            tmp = oe.contract('aby,cdy->abdc', upper, np.conj(upper) )  # permute cd to have
+            first_site = False
+            #      @ --  a
+            #      @
+            #      @ --  b
+            #      @
+            #      @ --  d    \
+            #      @          | ->  permuted cd here!
+            #      @ --  c    /
+        else:
+            #   a -- @ -- b
+            #        | c
+            #   i -- O -- j
+            #        |               
+            #        l
+            upper = oe.contract('abc,ijlc->aibjl', ss, oo)
+            block = oe.contract('abcde,fghie->abgfcdih', upper, np.conj(upper) )
+            tmp = oe.contract('abcd,abcdlmno->lmno', tmp, block )
 
-    else:
-        R_cache = cache_right
+        UPPER.append( upper.copy() )
+        LL.append( tmp.copy() )
 
-    #print('Rc len', len(R_cache))
-    #     mps*        O == (b)
-    #            (x)  | 
-    #     psi         r -- (a)
-    L = oe.contract('ax,bx->ab', psi_opti[0], np.conj(mps[0]) )
-    if sweep_normalize_LR: L = L/np.linalg.norm(L)
-    #print('init L site of size {}'.format(L.shape) )
-    L_cache = [ L ]
+    # contract with last block
+    upper = oe.contract('ax,byx->aby', mps[-1], mpo[-1] )
+    rho = oe.contract('abcd,abx,dcy->xy', tmp, upper, np.conj(upper) )
 
+    #UPPER = UPPER.reverse()
 
-    # getting ready for first swipe
-    jj = 0
-    for ii in range(1,N-1):
-        jj += 1
-        R = R_cache[-jj]
+    u,s,vh = np.linalg.svd(rho)
+    u,s,vh, err = crop_svd(u,s,vh)
+    print(rho)
 
-        #print( np.conj(mps[ii]).shape, R.shape )
-        #             (x)
-        #   a  == O ==  == @
-        #       b |        @
-        #             c -- @   
-        tmp = oe.contract('axb,cx->abc', np.conj(mps[ii]), R )
-        #                             (x)
-        #       # == y          y  == O ==  == @
-        #       #                   b |        @
-        #       # -- x                    c -- @   
-        psi_opti[ii] = oe.contract('xy,ybc->xcb', L, tmp )
+    upper_crop = oe.contract('abx,xc->abc', upper, u )
 
-        #print('written site {} of shape {}'.format(ii,psi_opti[ii].shape))
+    #print(UPPER[-1].shape)
+    #print(LL[-2].shape)
 
-        # prepare next step -------- 
-
-        #        c == O == d
-        #             |  x
-        #        a -- @ -- b
-        tmp = oe.contract('abx,cdx->acbd', psi_opti[ii], np.conj(mps[ii]) )
-        L = oe.contract('xy,xyab->ab', L, tmp)
-        if sweep_normalize_LR: L = L/np.linalg.norm(L)
-        L_cache.append( L.copy() )
+    rho56 = oe.contract('abcd,abjkE,dcmlF,jkG,mlH->EFGH', 
+                LL[-2], UPPER[-1], np.conj(UPPER[-1]), 
+                upper_crop, np.conj(upper_crop)
+    )
+    #         @ -- a
+    #         @
+    #         @ -- b 
+    #         |
+    #         x
 
 
-    #print('Lcache size =', len(L_cache) )
+    # TODO what is an SVD of a 4D tensor??
 
-    # optimizing the last site ------------
-    #       @ == y       y  == O 
-    #       @                b |
-    #       @ -- x             ?
-    #print('MIST', L.shape, np.conj(mps[-1]).shape)
-    psi_opti[-1] = oe.contract('xy,yb->xb', L, np.conj(mps[-1]))
-    #print('written final site ({}) of shape {}'.format(N-1,psi_opti[N-1].shape))
-
-    # prepare the reverse sweep -----------
-    #              b  == O 
-    #                  y |
-    #              x  -- @
-    #print('WARN', psi_opti[-1].shape, np.conj(mps[-1]).shape)
-    R = oe.contract('xy,by->xb', psi_opti[-1], np.conj(mps[-1]))
-    if sweep_normalize_LR: R = R/np.linalg.norm(R)
-    R_cache = [ R ]
-    jj = 1
-
-    #return psi_opti, None
-    #print('ccc', psi_opti)
-
-    for ii in reversed( range(1,N-1) ):
-        jj += 1
-        L = L_cache[-jj]
-
-        #             (x)
-        #   a  == O ==  == @
-        #       b |        @
-        #             c -- @
-        tmp = oe.contract('axb,cx->abc', np.conj(mps[ii]), R )
-        #                             (x)
-        #       # == y          y  == O ==  == @
-        #       #                   b |        @
-        #       # -- x                    c -- @   
-        psi_opti[ii] = oe.contract('xy,ybc->xcb', L, tmp )
-
-        #print('written site {} of shape {}'.format(ii,psi_opti[ii].shape))
-
-        # prepare next step -------- 
-
-        #        c == O == d
-        #             |  x
-        #        a -- @ -- b
-        tmp = oe.contract('abx,cdx->acbd', psi_opti[ii], np.conj(mps[ii]) )
-        R = oe.contract('xy,acxy->ac', R, tmp)
-        if sweep_normalize_LR: R = R/np.linalg.norm(R)
-        R_cache.append( R.copy() )
-
-        #return psi_opti, None
-
-    # optimizing the first site ------------
-    #       @ == y       y  == O     O ==  y    y == @
-    #       @                b |     | b             @
-    #       @ -- x             ?     ?          x -- @
-    psi_opti[0] = oe.contract('xy,yb->xb', R, np.conj(mps[0]))
-    #print('written first site ({}) of shape {}'.format(0,psi_opti[0].shape))
-
-    return psi_opti, R_cache[:-1]
+    return rho56
 
 
+def left_canonicalize_compress(mps, site : int, max_bd : int, normalize : bool = True):
 
+    assert site < len(mps)
 
-def compression_algo(mps, target_bond_dim, N_sweep = 1, guess = None):
+    for n in range(0, site):
 
-    if guess is None:
-        guess = google_random_mps(len(mps), bond_dim=target_bond_dim, canon = 1)
+        this = mps[n]
 
-    cache = None
+        if this.ndim < 3:
+            this = np.expand_dims(this, 0) # must be left tensor, bring to format (l,phys,r)
+            original_shape = this.shape
+            mode_swap = False
+        else:
+            this = np.swapaxes(this, 1, 2) # reshapes tensor (l,r,phys) -> (l,phys,r)
+            original_shape = this.shape
+            mode_swap = True
 
-    pss = guess.copy()
-    for i in range(N_sweep):
-        #print('sweep', i)
-        pss, cache = compression_sweep(mps, guess, cache)
+        this = this.reshape( (this.shape[0]*this.shape[1], this.shape[2]) ) # merge left and phys dim index
+
+        isometry, rest = np.linalg.qr( this )
+
+        print('site QR:', n,  isometry.shape, rest.shape)
+        print('   to origin ', original_shape)
+
+        if mode_swap:
+            # revert the axis swap
+            print(' before:', isometry )
+            mps[n] = np.swapaxes( isometry.reshape( original_shape ), 1, 2)
+            print(' after:', isometry.reshape( original_shape ) )
+        else:
+            mps[n] = isometry
         
-    return pss
+        mps[n+1] = oe.contract('ab,bcd->acd', rest, mps[n+1])
+
+        if normalize:
+            Z = np.linalg.norm( mps[n + 1] )
+            mps[n + 1] /= Z
+
+    return mps

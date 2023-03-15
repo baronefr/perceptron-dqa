@@ -1,2 +1,13 @@
 # development
 hidden/*
+trash/*
+external/*
+
+# test environments
+experiment/*
+
+# backups
+bak/*
+
+# tmp and cache
+__pycache__/*
