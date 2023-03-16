@@ -48,6 +48,24 @@ def apply_mpsmpo(mps, mpo) -> list:
     return [ contract_mps_mpo_single_site(mps[i], mpo[i]) for i in range( len(mps) ) ]
 
 
+def braket(bra, ket):
+    """Compute <bra|ket> contraction of MPS."""
+    assert len(bra) == len(ket)
+
+    prev = None
+
+    for bb, kk in zip(bra, ket):
+
+        mm = oe.contract('axb,cxd->acbd', bb, np.conj(kk))
+
+        if prev is not None:
+            prev = oe.contract('xy,xyab->ab', prev, mm)
+        else:
+            prev = mm[0,0,:,:]
+
+    return prev
+
+
 def make_rand_mpo_complex(N : int, bond_dim = 1):
     """Return a random complex MPO."""
 
