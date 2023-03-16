@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class PerceptronHamiltonian:
 
     def make_Ux(N, beta_p, dtype = np.complex128):
