@@ -1,3 +1,23 @@
+
+
+# ====================================================
+#  Quantum Information and Computing exam project
+#
+#   UNIPD Project |  AY 2022/23  |  QIC
+#   group : Barone, Coppi, Zinesi
+# ----------------------------------------------------
+#   > description                                    |
+#
+#   testing the custom tenn functions, comparing
+#   with Quimb output
+# ----------------------------------------------------
+#   coder : Barone Francesco
+#         :   github.com/baronefr/
+#   dated : 17 March 2023
+#     ver : 1.0.0
+# ====================================================
+
+
 # %%
 
 import numpy as np
@@ -42,7 +62,7 @@ for mm, qq in zip(my_res, quimb_res.tensors):
 # %%
 
 qmps.right_canonize(start=N,stop=0)
-myrc = right_canonicalize(mps, 1, True)
+myrc = right_canonize(mps, 1, True)
 
 # %%
 
@@ -60,7 +80,7 @@ print('test passed')
 
 # %%
 
-from tenso2 import compress_svd_normalized as csvd_test
+from lrp_utility import compress_svd_normalized as csvd_test
 mps_tenso = convert_from_quimb(quimb_res)
 mps_tenso = convert(mps_tenso)
 

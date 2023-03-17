@@ -1,97 +1,164 @@
+#!/usr/bin/python3
+
+# ====================================================
+#  Quantum Information and Computing exam project
+#
+#   UNIPD Project |  AY 2022/23  |  QIC
+#   group : Barone, Coppi, Zinesi
+# ----------------------------------------------------
+#   > description                                    |
+#
+#   class setup of dQA execution
+# ----------------------------------------------------
+#   coder : Barone Francesco, Zinesi Paolo
+#         :   github.com/baronefr/
+#   dated : 17 March 2023
+#     ver : 1.0.0
+# ====================================================
+
+
+# %%
+
 import numpy as np
+import numpy.fft as fft
+import matplotlib.pyplot as plt
 
-class PerceptronHamiltonian:
+import jax
+from tqdm import tqdm
 
-    def make_Ux(N, beta_p, dtype = np.complex128):
-        """Return as MPO the U_x evolution operator at time-parameter beta_p."""
+# custom functions
+from tenn import *
+from dqa_general import *
 
-        tb = np.array( [[np.cos(beta_p), 1j*np.sin(beta_p)],[1j*np.sin(beta_p), np.cos(beta_p)]], dtype=dtype)
-        return [ np.expand_dims(tb, axis=(0,1)) for _ in range(N) ]
+# %%
 
-    def Wz(N, Uk : np.array, xi : int, marginal = None, dtype = np.complex128):
-        """The tensors of Eq. 17 of reference paper."""
+
+class mydQA():
+
+    def __init__(self, dataset, P : int, dt : float, max_bond : int = 10, device = None):
+
+        if device is None:
+            self.device = jax.devices('cpu')[0]
         
-        bond_dim = len(Uk)
-
-        if marginal == 'l':
-            shape = (1,bond_dim,2,2)
-        elif marginal == 'r':
-            shape = (bond_dim,1,2,2)
+        if isinstance(dataset, str):
+            self.dataset = np.load(dataset)
         else:
-            shape = (bond_dim,bond_dim,2,2)
+            self.dataset = dataset
 
-        tensor = np.zeros( shape, dtype = dtype )
-
-        coeff = np.power( Uk/np.sqrt(N+1), 1/N)
-        exx = 1j * np.arange(bond_dim) * np.pi / (N + 1)    # check: N+1
-
-        for kk in range(bond_dim):
-            spin_matrix = np.diag(
-                [ coeff[kk]*np.exp(exx[kk]*(1-xi)), 
-                coeff[kk]*np.exp(exx[kk]*(1+xi)) ] 
-            )
-            if marginal == 'l':
-                tensor[0,kk,:,:] = spin_matrix
-            elif marginal == 'r':
-                tensor[kk,0,:,:] = spin_matrix
-            else:
-                tensor[kk,kk,:,:] = spin_matrix
-
-        return tensor
-
-    def make_Uz(N : int, Uk : np.array, xi : np.array, dtype = np.complex128):
-        """Return as MPO the U_z evolution operator at time s_p (defined indirectly by Uk)."""
-
-        # Uk must be a vector for all k values, while p is fixed 
-        # xi must be a single sample from dataset
+        self.N_xi = self.dataset.shape[0]
+        self.N = self.dataset.shape[1]
         
-        assert len(xi) == N, 'not matching dims'
+        self.P = P
+        self.dt = dt
+        self.tau = dt * P
+        self.max_bond = max_bond
 
-        arrays = [ PerceptronHamiltonian.Wz(N, Uk, xi[0], marginal = 'l', dtype = dtype) ] + \
-                [ PerceptronHamiltonian.Wz(N, Uk, xi[i+1], dtype = dtype) for i in range(N-2) ] + \
-                [ PerceptronHamiltonian.Wz(N, Uk, xi[N-1], marginal = 'r', dtype = dtype) ]
+        self.pp = 0 # internal steps counter
 
-        return arrays
-    
+    def init_fourier(self):
+        self.Uk_FT = np.zeros((self.N+1,self.P), dtype=np.complex128)
+        for p in range(0,self.P):
+            self.Uk_FT[:,p] = fft.fft( np.exp(-1.0j*((p+1)/self.P)*(self.dt)*PerceptronHamiltonian.f_perceptron(range(self.N+1), self.N)), norm="ortho")
+        self.fxft = fft.fft( PerceptronHamiltonian.f_perceptron(range(self.N+1), self.N), norm="ortho" )
 
-    def h_perceptron(m, N):
-        """ Cost function to be minimized in the perceptron model, depending on the overlap m.
-            The total H_z Hamiltonian is obtained as a sum of these cost functions evaluated at each pattern csi_mu.
+    def compute_loss(self, psi):
+        N_tens = len(psi)
+        eps = 0.0
+        for mu in range(self.N_xi):
+            for kk in range(self.N+1):
+                mpo = PerceptronHamiltonian.Hz_mu_singleK(self.N, mu, kk, self.fxft, self.dataset)
+                # TODO: eventually store these matrices, since they are all the same
 
-            h(m) = 0 if m>=0 else -m/sqrt(N)
-        """
-        m = np.array(m)
-        return np.where(m>=0, 0, -m/np.sqrt(N)).squeeze()
+                psiH = apply_mpsmpo(psi, mpo)
 
-    def f_perceptron(x, N):
-        """ Cost function to be minimized in the perceptron model, depending on the Hamming distance x.
-            The total H_z Hamiltonian is obtained as a sum of these cost functions evaluated at each pattern csi_mu.
-
-            f(x) = h(N - 2x) = h(m(x)) with m(x) = N - 2x
-        """
-
-        m = N - 2*np.asarray(x)
-        return PerceptronHamiltonian.h_perceptron(m, N)
-
-
-    def Hz_mu_singleK(N, mu, K, f_FT_, patterns):
-        """ Build factorized Hz^{mu,k} (bond dimension = 1) on N sites"""
-
-        d = 2
-        Hz_i = []
-        for i in range(1,N+1):
-            tens = np.zeros((1,1,d,d), dtype=np.complex128)
-            for s_i in range(d):
-                tens[0,0,s_i,s_i] = np.power(f_FT_[K]/np.sqrt(N+1), 1/N) * np.exp(1.0j * (np.pi/(N+1)) * K * (1-patterns[mu,i-1]*(-1)**s_i))
-            Hz_i.append(tens.copy())
-
-        #Hz = qtn.MPO_product_operator(Hz_i)#, upper_ind_id='u{}', lower_ind_id='s{}')
-        return Hz_i
+                E = braket(psiH, psi)
+                eps += E/N_tens
+        return eps[0,0]
 
 
+    def single_step(self):
 
-def create_dataset(N : int, features : int):
-    """Create dataset as described by ref. paper, i.e. random +-1 values."""
-    x = np.random.randint(2, size=(N, features))
-    x[ x == 0 ] = -1  # data is encoded as +- 1
-    return x
+        psi = self.psi
+
+        s_p = (self.pp+1)/self.P
+        beta_p = (1-s_p)*self.dt
+
+        # loop over patterns
+        for mu in range(self.N_xi):
+
+            Uz = PerceptronHamiltonian.make_Uz(self.N, self.Uk_FT[:,self.pp], self.dataset[mu])
+            psi = apply_mpsmpo(psi, Uz)
+
+            #preprocess = compress_svd_normalized(psi, max_bd=max_bond)
+            #psi = right_canonicalize(preprocess, 1) # makes loss much more stable
+
+            preprocess = right_canonize(psi, 1)     # makes loss much more stable
+            psi = compress_svd_normalized(preprocess, max_bd=self.max_bond)
+
+            curr_bdim = psi[int(self.N/2)].shape[0]
+            self.bd_monitor.append( curr_bdim )
+
+        Ux = PerceptronHamiltonian.make_Ux(self.N, beta_p = beta_p)
+        psi = apply_mpsmpo(psi, Ux)
+
+        # evaluate  <psi | H | psi>
+        expv = self.compute_loss(psi)
+
+        # do not return implicitly, but update internal objects
+        self.psi = psi
+        self.loss.append( (s_p, expv) )
+        self.pp += 1
+
+        return expv
+
+
+    def run(self, skip_jit = None) -> float:
+
+        print('dQA---')
+        print(' tau = {}, P = {}, dt = {}'.format(self.tau, self.P, self.dt) )
+        print(' dataset :  N = {}, N_xi = {}'.format(self.N, self.N_xi) )
+        
+        # initialize state and internal counter
+        self.psi = [ np.array([[[2**-0.5], [2**-0.5]]], dtype=np.complex128) ] * self.N
+        self.pp = 0
+
+        # reset trackers
+        self.loss = []
+        self.bd_monitor = []
+        
+        l = self.compute_loss(self.psi)  # evaluate loss for first time
+        self.loss.append( (0, l) )
+
+        pbar = tqdm(total=self.P, desc='QAnnealing')
+
+        # exe without jit (useful at the beginning...)
+        if skip_jit is not None:
+            with jax.disable_jit():
+                for _ in range(skip_jit):
+                    expv = self.single_step()
+
+                    # etc
+                    pbar.update(1)
+                    pbar.set_postfix_str("loss = {}, bd = {}".format( np.around(expv, 5), self.bd_monitor[-1] ) )
+
+        else:
+            skip_jit = 0
+
+        # EXE
+        with jax.default_device(self.device):
+                for _ in range(self.P - skip_jit):
+                    expv = self.single_step()
+
+                    # etc
+                    pbar.update(1)
+                    pbar.set_postfix_str("loss = {}, bd = {}".format( np.around(expv, 5), self.bd_monitor[-1] ) )
+
+# %%
+
+#    usage example:
+#obj = mydQA('data/patterns_17-21.npy', 100, 1, max_bond=10)
+#obj.init_fourier()
+#obj.run()
+#plot_loss( obj.loss )
+
+# %%
