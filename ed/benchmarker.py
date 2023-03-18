@@ -93,7 +93,7 @@ else:
 N_data = 8
 N_feat = 10
 
-data   = np.load('../data/patterns8_10.npy')
+data   = np.load('../data/patterns8-10.npy')
 labels = tf.ones((N_data), 'float32')
 
 h_perc = tf.cast(H_perc_nobatch(data, labels), 'complex128')
