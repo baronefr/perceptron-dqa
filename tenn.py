@@ -182,8 +182,8 @@ def right_canonize(mps : List[np.ndarray], site : int) ->  List[np.ndarray]:
     assert site < len(mps)
     assert site >= 1
 
-    # create a copy to be modified
-    mps = [ el.copy() for el in mps ]
+    # create a copy to be modified FIXME
+    mps = [ el for el in mps ]
 
     # loop over each site, from last to second
     for n in reversed(range(site, len(mps))):

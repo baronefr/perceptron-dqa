@@ -1,3 +1,4 @@
 quimb
 opt_einsum
 autoray
+qiskit==0.38.0
