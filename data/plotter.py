@@ -52,7 +52,7 @@ def symbols_line(pplot, x, y, color, marker, msize, label) -> None:
 
 # %% quimb backend
 
-mps_qtn = pd.read_csv('benchmark/17-21_quimb.csv')
+mps_qtn = pd.read_csv('benchmark/quimb_17-21.csv')
 mps_qtn_100 = mps_qtn[  mps_qtn['P'] == 100 ]
 mps_qtn_1000 = mps_qtn[  mps_qtn['P'] == 1000 ]
 
@@ -83,7 +83,7 @@ plt.title('quimb MPS ($N = 21$)')
 
 # %% numpy backend
 
-mps_npy = pd.read_csv('benchmark/17-21_numpy.csv')
+mps_npy = pd.read_csv('benchmark/numpy_17-21.csv')
 mps_npy_100 = mps_npy[  mps_npy['P'] == 100 ]
 mps_npy_1000 = mps_npy[  mps_npy['P'] == 1000 ]
 
@@ -123,7 +123,7 @@ plt.title('numpy MPS ($N = 21$)')
 # # smaller dataset (N=10)
 #  this case allows to compare with ED on our modest PCs
 
-exact_diag = pd.read_csv('benchmark/8-10_ED.csv')
+exact_diag = pd.read_csv('benchmark/ED_8-10.csv')
 exact_diag_100 = exact_diag[ exact_diag['P'] == 100 ]
 exact_diag_1000 = exact_diag[ exact_diag['P'] == 1000 ]
 
@@ -141,7 +141,7 @@ plt.title('exact diagonalization ($N = 10$)')
 
 # %% quimb backend
 
-mps_npy = pd.read_csv('benchmark/8-10_quimb.csv')
+mps_npy = pd.read_csv('benchmark/quimb_8-10.csv')
 mps_npy_100 = mps_npy[  mps_npy['P'] == 100 ]
 mps_npy_1000 = mps_npy[  mps_npy['P'] == 1000 ]
 
@@ -170,7 +170,7 @@ plt.title('quimb MPS ($N = 10$)')
 
 # %% numpy backend
 
-mps_npy = pd.read_csv('benchmark/8-10_numpy_2.csv') # use this dataset for comparison with single shot
+mps_npy = pd.read_csv('benchmark/numpy_8-10_2.csv') # use this dataset for comparison with single shot
 mps_npy_100 = mps_npy[  mps_npy['P'] == 100 ]
 mps_npy_1000 = mps_npy[  mps_npy['P'] == 1000 ]
 
@@ -203,9 +203,9 @@ plt.title('numpy MPS ($N = 10$)')
 # %% numpy backend, but averaged
 
 files = [
-    'benchmark/8-10_numpy.csv',
-    'benchmark/8-10_numpy_2.csv',
-    #'benchmark/8-10_numpy_3.csv'
+    'benchmark/numpy_8-10_1.csv',
+    'benchmark/numpy_8-10_2.csv',
+    'benchmark/numpy_8-10_3.csv'
 ]
 
 tmp_100 = []
@@ -245,6 +245,32 @@ plt.title('numpy averaged comparison ($N=10$)')
 
 
 
+# %% test with 9-12
+
+mps_npy = pd.read_csv('benchmark/numpy_9-12.csv') # use this dataset for comparison with single shot
+mps_npy_100 = mps_npy[  mps_npy['P'] == 100 ]
+mps_npy_1000 = mps_npy[  mps_npy['P'] == 1000 ]
+
+
+plt.scatter(mps_npy_100['dt'], mps_npy_100['output'], linewidth=3, marker='*', s=120,
+            c=color_palette[0], label='MPS $P=100$')
+plt.plot(mps_npy_100['dt'], mps_npy_100['output'], linewidth=1, c=color_palette[0])
+
+plt.scatter(mps_npy_1000['dt'], mps_npy_1000['output'], linewidth=3, marker='s', s=100,
+            c=color_palette[1], label='MPS $P=1000$')
+plt.plot(mps_npy_1000['dt'], mps_npy_1000['output'], linewidth=1, c=color_palette[1])
+
+plt.plot(exact_diag_100['dt'], exact_diag_100['output'], linewidth=3, c=color_palette[0], label='ED $P=100$')
+plt.plot(exact_diag_1000['dt'], exact_diag_1000['output'], linewidth=3, c=color_palette[1], label='ED $P=1000$')
+
+plt.yscale('log')
+plt.tight_layout()
+plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
+plt.ylabel(r"$\varepsilon(1)$")
+plt.xlabel(r"$\delta t$")
+plt.title('numpy MPS ($N = 12$)')
+
+
 
 
 # %% [markdown]
@@ -253,13 +279,18 @@ plt.title('numpy averaged comparison ($N=10$)')
 # %% loading data
 
 files = [
-    'benchmark/17-21_full-loss_bd20.npy',
-    'benchmark/17-21_full-loss_bd40.npy',
-    'benchmark/17-21_full-loss_bd60.npy',
-    'benchmark/17-21_full-loss_bd80.npy',
+    'benchmark/numpy_17-21_loss/17-21_full-loss_bd2.npy',
+    'benchmark/numpy_17-21_loss/17-21_full-loss_bd4.npy',
+    'benchmark/numpy_17-21_loss/17-21_full-loss_bd8.npy',
+    'benchmark/numpy_17-21_loss/17-21_full-loss_bd10.npy',
+    'benchmark/numpy_17-21_loss/17-21_full-loss_bd15.npy',
+    'benchmark/numpy_17-21_loss/17-21_full-loss_bd20.npy',
+    'benchmark/numpy_17-21_loss/17-21_full-loss_bd40.npy',
+    'benchmark/numpy_17-21_loss/17-21_full-loss_bd60.npy',
+    'benchmark/numpy_17-21_loss/17-21_full-loss_bd80.npy',
 ]
 
-labels = [ '20', '40', '60', '80']
+labels = [ '2', '4', '8', '10', '15', '20', '40', '60', '80']
 
 bd_data = []
 for f in files:
@@ -295,7 +326,7 @@ for ii, curve in enumerate(bd_data):
 
 plt.ylabel(r"$\Delta\varepsilon(s)$")
 plt.xlabel(r"$s$")
-plt.legend()
+plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=5)
 plt.title('deviation from mean ($N = 21$, $P = 100$)')
 
 
