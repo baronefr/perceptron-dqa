@@ -1,5 +1,6 @@
 numpy
 jax
+jaxlib
 tqdm
 quimb==1.4.2
 opt_einsum
