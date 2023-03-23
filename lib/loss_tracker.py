@@ -57,15 +57,15 @@ def H_perc_diag(data, labels):
         h_perc += ReLU(-labels[i]*op)
         del op
 
-    return (h_perc / np.sqrt(n)).astype('complex')
+    return (h_perc / np.sqrt(n)).astype('complex128')
 
 
 class LossTracker:
-    def __init__(self, num_qubits, num_ancillae):
+    def __init__(self, num_qubits, num_ancillae, init_state):
 
         self.n_qubits   = num_qubits
         self.n_ancillae = num_ancillae
-        self._statevecs = []
+        self._statevecs = [qi.Statevector.from_instruction(init_state)]
         self._h_perc    = None
         self._little_endian = True
         self._statevecs_arr = None
@@ -75,24 +75,26 @@ class LossTracker:
 
         if compose:
             # create a copy of the current circuit internally
+            
             self.current_qc = QuantumCircuit(QuantumRegister(self.n_qubits), AncillaRegister(self.n_ancillae))
-            if len(self._statevecs) > 0:
-                self.current_qc.initialize(self._statevecs[-1], range(self.n_qubits+self.n_ancillae))
-
+            
             # compose the circuit
             if type(qc) is list:
+                
                 for circuit in qc:
-                    self.current_qc = self.current_qc.compose(circuit.copy())
+                    self.current_qc = self.current_qc.compose(circuit)
+                
             elif type(qc) is QuantumCircuit:
-                self.current_qc = self.current_qc.compose(qc.copy())
+                self.current_qc = self.current_qc.compose(qc)
             else:
                 print('Error: type of qc is', type(qc))
                 return
         else:
             self.current_qc = qc
 
-        # track the state
-        self._statevecs.append(qi.Statevector.from_instruction(self.current_qc))
+        # track the state        
+        self._statevecs.append(self._statevecs[-1].evolve(self.current_qc))
+       
         del self.current_qc
 
     @property
@@ -174,16 +176,14 @@ if __name__ == '__main__':
         qc = QuantumCircuit(num_qubits+num_ancillae)
         if p == 1:
             qc.h(range(num_qubits))
-            
         if p == 2:
             qc.h(range(num_qubits))
             qc.x(range(num_qubits, num_qubits+num_ancillae))
-            
         if p == 3:
-            qc.cx(5, 3)
-            
+            qc.x( 3)
         if p == 4:
             qc.x(2)
+
         return qc
     
     N_data = 3
@@ -201,12 +201,12 @@ if __name__ == '__main__':
     num_ancillae = 2
 
     qc_tot = QuantumCircuit(num_qubits + num_ancillae)
-    loss_tracker = LossTracker(num_qubits, num_ancillae)
+    loss_tracker = LossTracker(num_qubits, num_ancillae, init_state=qc_tot)
 
     # apply evoltion 
     for p in range(P):
 
-        qc = your_evolution(qc, p+1, num_qubits, num_ancillae)
+        qc = your_evolution(p+1, num_qubits, num_ancillae)
         loss_tracker.track(qc, compose=True)
         qc_tot = qc_tot.compose(qc)
 
@@ -214,4 +214,4 @@ if __name__ == '__main__':
     qc_tot.draw()
 
 
-    print(loss_tracker.get_edensity(data, little_endian=True))
+    print(loss_tracker.get_losses(data, little_endian=True))
