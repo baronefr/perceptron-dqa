@@ -39,6 +39,25 @@ def H_perc_nobatch(data, labels):
 
     return (h_perc / np.sqrt(n)).astype('complex')
 
+def H_perc_diag(data, labels):
+    ## ASSUMING H_PERC IS DIAGONAL, WHICH IS IN THE COMPUTATIONAL BASIS ##
+    n_data, n = data.shape
+    identity = np.ones((2,), 'float32')
+    sigma_z  = np.array([1., -1.])
+
+    h_perc = np.zeros((2**n,), dtype='float32')
+    
+    for i in tqdm(range(n_data), desc='Constructing H_perc'):
+
+        op = np.zeros((2**n,), dtype='float32')
+        for j in range(n):
+
+            op += kronecker_prod([identity]*j+[data[i, j] * sigma_z]+[identity]*(n-j-1))
+
+        h_perc += ReLU(-labels[i]*op)
+        del op
+
+    return (h_perc / np.sqrt(n)).astype('complex')
 
 
 class LossTracker:
@@ -128,11 +147,11 @@ class LossTracker:
         if self._h_perc is None or self._little_endian != little_endian:
 
             if little_endian:
-                self._h_perc = H_perc_nobatch(data, labels)
+                self._h_perc = H_perc_diag(data, labels)
             else:
                 # invert data components if the circuit was constructed in big endian mode
                 # NOT SURE IF THIS WORKS
-                self._h_perc = H_perc_nobatch(data[:,::-1], labels)
+                self._h_perc = H_perc_diag(data[:,::-1], labels)
            
            
         return np.apply_along_axis(self.__loss, axis=1, arr=self._statevecs_arr, h_perc=self._h_perc)
