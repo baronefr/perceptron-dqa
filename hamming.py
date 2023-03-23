@@ -53,7 +53,7 @@ def circuit_heaviside(data_qubits : int, # how many quibits are used for data en
 
     # prepare ancillary qubits with Hadamard gate
     for ii in range(ancillary_qubits):
-        #qc.initialize([1, 0], data_qubits + ii)
+        qc.initialize([1, 0], data_qubits + ii)
         qc.h(data_qubits + ii)
 
     # linking the phase shifts in Fourier basis
@@ -108,10 +108,11 @@ class Hamming:
         #    # syntax:  lambda, control_qubit, target_qubit
         #    qc.cp( -2 * gamma * self.dataset[mu, ii], self.control_q, ii)
 
+        # da Paolo (adapted) ----------------------
         for jj in range( self.n_qubit ):
             qc.crz(-2*gamma*self.dataset[mu, jj]/np.sqrt(self.n_qubit),  self.control_q, jj)
 
-        # da Paolo ---------------------
+        # da Paolo (original) ---------------------
         #for j in range(data_qubits):
         #    qc.crz(-2*gamma_t*((-1)**(data[j]+1))/np.sqrt(data_qubits), qc.num_qubits-1, j)
 
