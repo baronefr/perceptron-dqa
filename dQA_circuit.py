@@ -39,31 +39,86 @@ class HammingEvolution:
     def __init__(self, num_data_qubits) -> None:
         
         # number of qubits, number ancillas used to count, number of ancillas used to compare Hamming distance
-        self.num_data_qubits = num_data_qubits
-        self.num_count_ancillas = int(np.ceil(np.log2(num_data_qubits+1)))
+        self._num_data_qubits = num_data_qubits
+        self._num_count_ancillas = int(np.ceil(np.log2(num_data_qubits+1)))
 
         # in this situation the comparison is really simple
-        self.simple_compare = (self.num_data_qubits + 1 == 2**self.num_count_ancillas)
+        self._simple_compare = (self._num_data_qubits + 1 == 2**self._num_count_ancillas)
 
         # circuit initializer
-        self.data_qubits = QuantumRegister(self.num_data_qubits)
-        self.count_ancillas = AncillaRegister(self.num_count_ancillas)
-        self.qc = QuantumCircuit(self.data_qubits, self.count_ancillas)
+        self._data_qubits = QuantumRegister(self._num_data_qubits)
+        self._count_ancillas = AncillaRegister(self._num_count_ancillas)
+        self._qc = QuantumCircuit(self._data_qubits, self._count_ancillas)
 
         # intialize comparison ancillas if necessary
-        if not self.simple_compare:
-            self.num_comp_ancillas = self.num_count_ancillas
-            self.comp_ancillas = AncillaRegister(self.num_count_ancillas)
-            self.qc.add_register(self.comp_ancillas)
-        else:
-            self.num_comp_ancillas = 0
+        if not self._simple_compare:
+            self._num_comp_ancillas = self._num_count_ancillas
+            self._comp_ancillas = AncillaRegister(self._num_count_ancillas)
+            self._qc.add_register(self._comp_ancillas)
 
         # ancilla in which the Heaviside control will be stored
-        if self.simple_compare:
-            self.control_ancilla = self.count_ancillas[-1]
+        if self._simple_compare:
+            self._control_ancilla = self._count_ancillas[-1]
         else:
-            self.control_ancilla = self.comp_ancillas[0]
+            self._control_ancilla = self._comp_ancillas[0]
 
+
+    @property
+    def num_data_qubits(self):
+        return self._num_data_qubits
+    
+    @property
+    def num_count_ancillas(self):
+        return self._num_count_ancillas
+    
+    @property
+    def simple_compare(self):
+        return self._simple_compare
+    
+    @property
+    def data_qubits(self):
+        return self._data_qubits
+    
+    @property
+    def count_ancillas(self):
+        return self._count_ancillas
+    
+    @property
+    def qc(self):
+        return self._qc
+    
+    @property
+    def num_comp_ancillas(self):
+        if self._simple_compare:
+            return 0
+        else:
+            return self._num_comp_ancillas
+
+    @property
+    def comp_ancillas(self):
+        if self._simple_compare:
+            return []
+        else:
+            return self._comp_ancillas
+    
+    @property
+    def num_ancillas(self):
+        return self.num_count_ancillas + self.num_comp_ancillas
+    
+    @property
+    def ancillas(self):
+        return list(self.count_ancillas) + list(self.comp_ancillas)
+    
+    @property
+    def qubits(self):
+        return list(self.data_qubits) + list(self.count_ancillas) + list(self.comp_ancillas)
+    
+    @property
+    def control_ancilla(self):
+        return self._control_ancilla
+    
+
+    
 
     def init_state_plus(self):
         """
@@ -133,7 +188,7 @@ class HammingEvolution:
         # add an additional comparison circuit if needed
         if not self.simple_compare:
             circ = circ.compose(IntegerComparator(self.num_count_ancillas, int(np.ceil(self.num_data_qubits/2.0)), geq=True).decompose(reps=1),
-                                qubits=list(self.count_ancillas)+list(self.comp_ancillas))
+                                qubits=self.ancillas)
 
         return circ
 
