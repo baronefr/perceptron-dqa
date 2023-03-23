@@ -56,8 +56,8 @@ def get_statevec(qc, num_qubits):
     statevec = qi.Statevector.from_instruction(qc)
     out_red = qi.partial_trace(statevec, range(num_qubits, qc.num_qubits))
     prob, st_all = np.linalg.eig(out_red.data)
-    cond = (prob>0.99) & (prob<1.01)
-    st = st_all[:, cond].ravel()
+    id = np.argmax(prob)
+    st = st_all[:, id]
     
     return(st)
 
@@ -84,6 +84,8 @@ def get_losses_from_results(results, data, labels, num_qubits, representation='s
 def get_losses_from_sts(statevecs, data, labels, representation='same'):
     statevectors = np.stack(statevecs)
 
+    n_data, n = data.shape
+
     if representation != 'same':
         # invert data components if the circuit was constructed in big endian mode
         # NOT SURE IF THIS WORKS
@@ -91,7 +93,9 @@ def get_losses_from_sts(statevecs, data, labels, representation='same'):
     else:
         h_perc = H_perc_nobatch(data, labels)
 
-    return np.apply_along_axis(loss, axis=1, arr=statevectors, h_perc=h_perc)
+        eigvals, _ = np.linalg.eigh(h_perc)
+
+    return (np.apply_along_axis(loss, axis=1, arr=statevectors, h_perc=h_perc) - eigvals[0]) / n
 
 
 
