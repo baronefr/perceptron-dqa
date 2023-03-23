@@ -16,5 +16,5 @@ bak/*
 */__pycache__/*
 
 # external libraries
-lib/leaves/*
-lib/matcha/*
+lib/leaves*
+lib/matcha*
