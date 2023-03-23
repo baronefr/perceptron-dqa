@@ -106,6 +106,7 @@ class LossTracker:
     def reset(self, num_qubits=None, num_ancillae=None):
         self._statevecs.clear()
         self._statevecs_arr = None
+        self._h_perc = None
 
         if num_qubits:
             self.n_qubits = num_qubits
@@ -126,7 +127,6 @@ class LossTracker:
         del out_red, prob, st_all, idx, arr_list
 
     def __loss(self, statevec, h_perc):
-
         return np.vdot(statevec, h_perc * statevec)
 
     def get_losses(self, data, little_endian=True, labels=None):
@@ -158,10 +158,9 @@ class LossTracker:
     def get_edensity(self, data, little_endian=True, labels=None):
 
         losses = self.get_losses(data, little_endian=little_endian, labels=labels)
-        e0 = np.sort(self._h_perc)[0]
+        eigvals, _ = np.linalg.eigh(self._h_perc)
 
-        return (losses-e0) / data.shape[1]
-    
+        return (losses-eigvals[0]) / data.shape[1]
 
 
 if __name__ == '__main__':

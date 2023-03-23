@@ -7,10 +7,10 @@ source mydqa/bin/activate
 # install requirements
 pip3 install -r requirements.txt
 
-# download the Quantum Matcha library
-git clone https://baltig.infn.it/quantum_tea_leaves/py_api_quantum_tea_leaves/-/tree/master/ lib/
-git clone https://baltig.infn.it/quantum_matcha_tea/py_api_quantum_matcha_tea/-/tree/master  lib/
+# download the Quantum Matcha library (qmatchatea and qtealeaves)
+git clone https://baltig.infn.it/quantum_tea_leaves/py_api_quantum_tea_leaves.git lib/leaves/
+git clone https://baltig.infn.it/quantum_matcha_tea/py_api_quantum_matcha_tea.git lib/matcha/
 
-# install the Q libraries
-pip3 install -e lib/py_api_quantum_tea_leaves/
-pip3 install -e lib/py_api_quantum_matcha_tea/
+# install the q* libraries
+pip3 install -e lib/leaves/
+pip3 install -e lib/matcha/

@@ -1,22 +1,3 @@
-#!/usr/bin/python3
-
-# ====================================================
-#  Quantum Information and Computing exam project
-#
-#   UNIPD Project |  AY 2022/23  |  QIC
-#   group : Barone, Coppi, Zinesi
-# ----------------------------------------------------
-#   > description                                    |
-#
-#   class setup of dQA execution
-# ----------------------------------------------------
-#   coder : Coppi Alberto, Zinesi Paolo
-#         :   github.com/baronefr/
-#   dated : 17 March 2023
-#     ver : 1.0.0
-# ====================================================
-
-
 # %%
 
 import numpy as np
@@ -27,7 +8,7 @@ from qiskit.circuit.library import QFT, IntegerComparator
 from qiskit.visualization import plot_histogram
 from qiskit.quantum_info import Statevector
 
-from lib.loss_tracker import *
+from lib.losstre import * # do not touch
 from tqdm import trange
 
 # %%
@@ -55,8 +36,6 @@ class HammingEvolution:
             self.num_comp_ancillas = self.num_count_ancillas
             self.comp_ancillas = AncillaRegister(self.num_count_ancillas)
             self.qc.add_register(self.comp_ancillas)
-        else:
-            self.num_comp_ancillas = 0
 
         # ancilla in which the Heaviside control will be stored
         if self.simple_compare:
@@ -187,13 +166,11 @@ if __name__== "__main__":
     # initializations
     N_xi, N_features = 5, 7
     csi_patterns = np.random.choice([1,-1], size=(N_xi, N_features))
-    labels = np.ones( (N_xi,) )
+    labels = np.ones((N_xi, ))
 
     # loop variables
-    P = 100
+    P = 50
     dt = 1
-
-
 
 
     ################################
@@ -207,11 +184,12 @@ if __name__== "__main__":
     qc = qc_generator.init_state_plus()
 
     # track losses
-    loss_tracker = LossTracker( qc_generator.num_data_qubits, 
-                                qc_generator.num_comp_ancillas + qc_generator.num_count_ancillas )
+    mystates = []
+    mystates.append(get_statevec(qc, N_features))
+
 
     # start "training"
-    for pp in trange(4):
+    for pp in trange(P):
         s_p = (pp+1)/P
         gamma_p = s_p*dt
         beta_p = (1-s_p)*dt
@@ -230,22 +208,19 @@ if __name__== "__main__":
             qc = qc.compose(qc_Uz)
             qc = qc.compose(qc_counter_inverse)
 
+        # measure loss
+        mystates.append(get_statevec(qc, N_features))
+
         # create and apply Ux evolution circuit
         qc_Ux = qc_generator.U_x(beta_p)
         qc = qc.compose(qc_Ux)
 
-        # measure loss
-        loss_tracker.track( [qc_counter, qc_Uz, qc_counter_inverse, qc_Ux], compose=True)
-
-
     
     # print final results and losses
-    #finalstate = Statevector.from_instruction(qc)
-    #plot_histogram(finalstate.probabilities_dict(), number_to_keep=2**N_features)
+    finalstate = Statevector.from_instruction(qc)
+    plot_histogram(finalstate.probabilities_dict(), number_to_keep=2**N_features)
     
-    loss = loss_tracker.get_edensity(csi_patterns, little_endian=True)
+    loss = np.real_if_close(get_losses_from_sts(mystates, csi_patterns, labels, representation='same'))
     plt.plot(loss)
     plt.yscale('log')
 
-
-# %%

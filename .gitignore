@@ -5,14 +5,16 @@ external/*
 
 # test environments
 experiment/*
-myenv/*
+mydqa/*
 activate.sh
+env.yml
 
 # backups
 bak/*
 
 # tmp and cache
-__pycache__/*
+*/__pycache__/*
 
 # external libraries
-lib/py_*
+lib/leaves/*
+lib/matcha/*
