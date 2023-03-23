@@ -1,19 +1,19 @@
+# backups
+bak/*
+
 # development
 hidden/*
 trash/*
 external/*
 
-# test environments
+# environments
 experiment/*
 mydqa/*
 activate.sh
 env.yml
 
-# backups
-bak/*
-
 # tmp and cache
-*/__pycache__/*
+**/__pycache__/**
 
 # external libraries
 lib/leaves*
