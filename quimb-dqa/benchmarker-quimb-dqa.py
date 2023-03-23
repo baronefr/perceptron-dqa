@@ -10,7 +10,7 @@
 #
 #   utility script
 # ----------------------------------------------------
-#   coder : Barone Francesco
+#   coder : Barone Francesco, Paolo Zinesi
 #         :   github.com/baronefr/
 #   dated : 17 March 2023
 #     ver : 1.0.0
@@ -21,7 +21,6 @@ from datetime import datetime
 
 import numpy as np
 import numpy.fft as fft
-from scipy.special import binom
 
 from quimb import tensor as qtn
 

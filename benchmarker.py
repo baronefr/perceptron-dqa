@@ -20,7 +20,7 @@ import numpy as np
 import os
 from datetime import datetime
 
-import dqa
+import dQA_mps
 
 # ----------------------
 #   TARGET DEFINITIONS
@@ -29,7 +29,7 @@ import dqa
 # function to run -------------------
 def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
 
-    obj = dqa.mydQA(datafile, P=P, dt=dt, max_bond=max_bond_dim)
+    obj = dQA_mps.mydQA(datafile, P=P, dt=dt, max_bond=max_bond_dim)
     obj.init_fourier()
     obj.run(skip_jit=4)
 

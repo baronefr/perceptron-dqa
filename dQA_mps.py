@@ -28,11 +28,9 @@ from jax.config import config
 from tqdm import tqdm
 
 
-import sys
-
 # custom functions
-from tenn import *
-from dqa_general import *
+from lib.tenn import *
+from lib.dQA_utils import *
 
 # %%
 
@@ -93,6 +91,7 @@ class mydQA():
             Uz = PerceptronHamiltonian.make_Uz(self.N, self.Uk_FT[:,self.pp], self.dataset[mu])
             psi = apply_mpsmpo(psi, Uz)
 
+            # quicker way
             #preprocess = compress_svd_normalized(psi, max_bd=self.max_bond)
             #psi = right_canonize(preprocess, 1) # makes loss much more stable
 
@@ -163,9 +162,9 @@ class mydQA():
 
 
 #    usage example:
-#obj = mydQA('data/patterns_17-21.npy', 100, 1, max_bond=10)
-#obj.init_fourier()
-#obj.run(skip_jit=40)
-#plot_loss( obj.loss )
+if __name__== "__main__":
+    obj = mydQA('data/patterns_17-21.1.npy', 100, 1, max_bond=10)
+    obj.init_fourier()
+    obj.run(skip_jit=4)
+    plot_loss( obj.loss )
 
-# %%

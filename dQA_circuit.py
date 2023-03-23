@@ -6,7 +6,7 @@ from qiskit.circuit.library import QFT, IntegerComparator
 from qiskit.visualization import plot_histogram
 from qiskit.quantum_info import Statevector
 
-from losstre import *
+from lib.losstre import *
 from tqdm import trange
 
 

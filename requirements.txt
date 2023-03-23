@@ -1,4 +1,7 @@
-quimb
+numpy
+jax
+tqdm
+quimb==1.4.2
 opt_einsum
 autoray
 qiskit==0.38.0

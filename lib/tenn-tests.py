@@ -27,6 +27,8 @@ from tenn import *
 import quimb as qu
 import quimb.tensor as qtn
 
+from bak.lrp_utility import compress_svd_normalized as csvd_test
+
 # %% parameters of this test
 
 N = 5
@@ -80,7 +82,7 @@ print('test passed')
 
 # %%
 
-from lrp_utility import compress_svd_normalized as csvd_test
+
 mps_tenso = convert_from_quimb(quimb_res)
 mps_tenso = convert(mps_tenso)
 
