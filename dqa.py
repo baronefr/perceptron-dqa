@@ -24,7 +24,11 @@ import numpy.fft as fft
 import matplotlib.pyplot as plt
 
 import jax
+from jax.config import config
 from tqdm import tqdm
+
+
+import sys
 
 # custom functions
 from tenn import *
@@ -89,9 +93,10 @@ class mydQA():
             Uz = PerceptronHamiltonian.make_Uz(self.N, self.Uk_FT[:,self.pp], self.dataset[mu])
             psi = apply_mpsmpo(psi, Uz)
 
-            #preprocess = compress_svd_normalized(psi, max_bd=max_bond)
-            #psi = right_canonicalize(preprocess, 1) # makes loss much more stable
+            #preprocess = compress_svd_normalized(psi, max_bd=self.max_bond)
+            #psi = right_canonize(preprocess, 1) # makes loss much more stable
 
+            # similar to Quimb ...
             preprocess = right_canonize(psi, 1)     # makes loss much more stable
             psi = compress_svd_normalized(preprocess, max_bd=self.max_bond)
 
@@ -116,6 +121,7 @@ class mydQA():
 
         print('dQA---')
         print(' tau = {}, P = {}, dt = {}'.format(self.tau, self.P, self.dt) )
+        print(' max bd =', self.max_bond)
         print(' dataset :  N = {}, N_xi = {}'.format(self.N, self.N_xi) )
         
         # initialize state and internal counter
@@ -133,7 +139,7 @@ class mydQA():
 
         # exe without jit (useful at the beginning...)
         if skip_jit is not None:
-            with jax.disable_jit():
+                config.update('jax_disable_jit', True)
                 for _ in range(skip_jit):
                     expv = self.single_step()
 
@@ -145,20 +151,21 @@ class mydQA():
             skip_jit = 0
 
         # EXE
+        config.update('jax_disable_jit', False)
         with jax.default_device(self.device):
-                for _ in range(self.P - skip_jit):
+                for pp in range(self.P - skip_jit):
                     expv = self.single_step()
 
                     # etc
                     pbar.update(1)
                     pbar.set_postfix_str("loss = {}, bd = {}".format( np.around(expv, 5), self.bd_monitor[-1] ) )
-
 # %%
+
 
 #    usage example:
 #obj = mydQA('data/patterns_17-21.npy', 100, 1, max_bond=10)
 #obj.init_fourier()
-#obj.run()
+#obj.run(skip_jit=40)
 #plot_loss( obj.loss )
 
 # %%

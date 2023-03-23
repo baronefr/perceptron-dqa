@@ -16,24 +16,35 @@
 #     ver : 1.0.0
 # ====================================================
 
-import numpy as np
 import os
+import numpy as np
 from datetime import datetime
+from ed_utils_ncp import *
+from tqdm import tqdm
 
-import dqa
 
 # ----------------------
 #   TARGET DEFINITIONS
 # ----------------------
 
 # function to run -------------------
-def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
+def function_to_run(h_perc, h_x, E0, N_feat, P, dt):
+    
+    state = init_state(N_feat)
+    loss  = []
 
-    obj = dqa.mydQA(datafile, P=P, dt=dt, max_bond=max_bond_dim)
-    obj.init_fourier()
-    obj.run(skip_jit=4)
+    pbar = tqdm(range(P), desc='ED QA')
+    for i in pbar:
 
-    return np.real( obj.loss[-1][1] )
+        h_t   = H_QA(i+1, P, h_perc, h_x)
+        state = ed_qa_step(state, h_t, dt)
+
+        loss.append(ncp.real_if_close((ncp.tensordot(state.conjugate(), ncp.dot(h_perc, state), axes=1)-E0)/N_feat))
+
+        pbar.set_postfix({'loss':loss[-1].astype('float32'), 'norm':ncp.linalg.norm(state).astype('float32')})
+
+    
+    return loss[-1], np.stack(loss)
 
 
 # parameters to test ----------------
@@ -41,13 +52,11 @@ def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
 #  NOTE: format as list of dictionaries, which will be passed to input function as arguments
 #
 parameter_combinations = [
-    {'P' : 1000, 'dt' : np.round(dt,3), 'max_bond_dim' : 20, 'datafile' : 'data/patterns_8-10.3.npy'} 
-    for dt in np.arange(start = 0.1, stop=2.1, step = 0.1)
-    # default syntax: P,dt,max_bond_dim,datafile,output
+    {'P' : 1000, 'dt' : np.round(dt,3)} for dt in np.arange(start = 0.1, stop=2.0, step = 0.1)
 ]
 
 # target file to log results
-benchmark_file = 'test3.csv'
+benchmark_file = 'test.csv'
 
 
 
@@ -74,6 +83,19 @@ else:
     print('benchmark file exists, do not print header')
 
 
+# read data and prepare hamiltonians
+# put out of grid search as it is needed once per datafile
+data_fname = '../data/patterns_8-10.npy'
+
+data   = np.load(data_fname)
+N_data, N_feat = data.shape
+labels = np.ones((N_data), 'float32')
+
+h_perc_diag = H_perc_diag(data, labels)
+E0     = np.sort(h_perc_diag)[0]
+h_x    = H_x(data.shape[1])
+h_perc = np.diag(h_perc_diag)
+
 
 
 
@@ -81,14 +103,17 @@ else:
 #        EXECUTE
 # ----------------------
 exe_failure_counter = 0
-for settings in parameter_combinations:
+date_time = datetime.now().strftime('%Y%m%d%H%M%S')
+for settings in tqdm(parameter_combinations, desc='Grid search'):
 
+    print('Running with: ', settings)
     try:
         # run the target function, but catch exceptions ...
-        value_to_log = function_to_run(**settings)
+        value_to_log, loss_history = function_to_run(h_perc, h_x, E0, N_feat, **settings)
 
     except Exception as e:
         value_to_log = None  # None marks a failure
+        loss_history = np.zeros((1,))
         exe_failure_counter += 1
 
         # write this error to log file, if argument error_log_file valid
@@ -106,9 +131,13 @@ for settings in parameter_combinations:
     benf.write(',' + str(value_to_log) + '\n')
     benf.close()
 
+    # save loss history
+    np.save('losses/loss_history_{}_P{}_dt{:.1f}_E{:.1f}.npy'.format(datetime.now().strftime('%Y%m%d%H%M%S'), settings['P'], settings['dt'], E0), loss_history)
+
+
     if exe_failure_counter >= MAX_FAILURE_TOLERANCE:
         raise Exception('multiple failures occurred in benchmarks, aborting...')
 
 
-print('\noperations completed')
-exit(0)
+print('operations completed')
+os.exit(0)

@@ -17,23 +17,39 @@
 # ====================================================
 
 import numpy as np
+import tensorflow as tf
+import tensorflow.linalg as tfl
 import os
 from datetime import datetime
+from ed_utils import *
 
-import dqa
+from tqdm import tqdm
+
+
 
 # ----------------------
 #   TARGET DEFINITIONS
 # ----------------------
 
 # function to run -------------------
-def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
+def function_to_run(h_perc, h_x, E0, N_feat, P, dt):
+    
+    state = init_state(N_feat)
+    loss  = []
 
-    obj = dqa.mydQA(datafile, P=P, dt=dt, max_bond=max_bond_dim)
-    obj.init_fourier()
-    obj.run(skip_jit=4)
+    pbar = tqdm(range(P), desc='ED QA')
+    for i in pbar:
 
-    return np.real( obj.loss[-1][1] )
+        h_t   = H_QA(i+1, P, h_perc, h_x)
+        state = ed_qa_step(state, h_t, dt)
+
+        loss.append(tf.cast((tf.tensordot(tf.math.conj(state), tfl.matvec(tf.cast(h_perc, 'complex128'), state), axes=1)-E0)/N_feat, 'float32').numpy())
+
+        pbar.set_postfix({'loss':loss[-1], 'norm':tf.cast(tf.norm(state), 'float32').numpy()})
+
+    np.save(f'losses/loss_history_P{P}_dt{dt:.1f}_E{E0:.1f}.npy', np.stack(loss))
+
+    return loss[-1]
 
 
 # parameters to test ----------------
@@ -41,13 +57,11 @@ def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
 #  NOTE: format as list of dictionaries, which will be passed to input function as arguments
 #
 parameter_combinations = [
-    {'P' : 1000, 'dt' : np.round(dt,3), 'max_bond_dim' : 20, 'datafile' : 'data/patterns_8-10.3.npy'} 
-    for dt in np.arange(start = 0.1, stop=2.1, step = 0.1)
-    # default syntax: P,dt,max_bond_dim,datafile,output
+    {'P' : 1000, 'dt' : np.round(dt,3)} for dt in np.arange(start = 0.1, stop=2.0, step = 0.1)
 ]
 
 # target file to log results
-benchmark_file = 'test3.csv'
+benchmark_file = 'test.csv'
 
 
 
@@ -74,6 +88,18 @@ else:
     print('benchmark file exists, do not print header')
 
 
+#read data and prepare hamiltonians
+
+N_data = 8
+N_feat = 10
+
+data   = np.load('../data/patterns8-10.npy')
+labels = tf.ones((N_data), 'float32')
+
+h_perc = tf.cast(H_perc_nobatch(data, labels), 'complex128')
+E0     = tfl.eigh(h_perc)[0][0]
+h_x    = tf.cast(H_x(N_feat), 'complex128')
+
 
 
 
@@ -81,11 +107,12 @@ else:
 #        EXECUTE
 # ----------------------
 exe_failure_counter = 0
-for settings in parameter_combinations:
+for settings in tqdm(parameter_combinations, desc='Grid search'):
 
+    print('Running with: ', settings)
     try:
         # run the target function, but catch exceptions ...
-        value_to_log = function_to_run(**settings)
+        value_to_log = function_to_run(h_perc, h_x, E0, N_feat, **settings)
 
     except Exception as e:
         value_to_log = None  # None marks a failure
@@ -110,5 +137,5 @@ for settings in parameter_combinations:
         raise Exception('multiple failures occurred in benchmarks, aborting...')
 
 
-print('\noperations completed')
-exit(0)
+print('operations completed')
+os.exit(0)

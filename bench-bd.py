@@ -27,11 +27,15 @@ import dqa
 # ----------------------
 
 # function to run -------------------
-def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
+def function_to_run(P, dt, max_bond, **ignore ):
 
-    obj = dqa.mydQA(datafile, P=P, dt=dt, max_bond=max_bond_dim)
+    obj = dqa.mydQA('data/patterns_17-21.npy', P=P, dt=dt, max_bond=max_bond)
     obj.init_fourier()
     obj.run(skip_jit=4)
+    
+    loss = [ el[1] for el in obj.loss ]
+    loss = np.array(loss)
+    np.save('data/benchmark/17-21_full-loss_bd{}.npy'.format(max_bond), loss)
 
     return np.real( obj.loss[-1][1] )
 
@@ -41,13 +45,11 @@ def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
 #  NOTE: format as list of dictionaries, which will be passed to input function as arguments
 #
 parameter_combinations = [
-    {'P' : 1000, 'dt' : np.round(dt,3), 'max_bond_dim' : 20, 'datafile' : 'data/patterns_8-10.3.npy'} 
-    for dt in np.arange(start = 0.1, stop=2.1, step = 0.1)
-    # default syntax: P,dt,max_bond_dim,datafile,output
+    {'P' : 100, 'dt' : 1.0, 'max_bond' : int(mb) } for mb in [2, 4, 8, 10, 15]
 ]
 
 # target file to log results
-benchmark_file = 'test3.csv'
+benchmark_file = 'test.csv'
 
 
 

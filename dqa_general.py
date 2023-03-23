@@ -104,7 +104,7 @@ class PerceptronHamiltonian:
             tens = np.zeros((1,1,d,d), dtype=np.complex128)
             for s_i in range(d):
                 tens[0,0,s_i,s_i] = np.power(f_FT_[K]/np.sqrt(N+1), 1/N) * np.exp(1.0j * (np.pi/(N+1)) * K * (1-patterns[mu,i-1]*(-1)**s_i))
-            Hz_i.append(tens.copy())
+            Hz_i.append(tens)
 
         #Hz = qtn.MPO_product_operator(Hz_i)#, upper_ind_id='u{}', lower_ind_id='s{}')
         return Hz_i
