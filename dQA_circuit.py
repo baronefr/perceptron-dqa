@@ -263,10 +263,11 @@ if __name__== "__main__":
 
     # track losses
     loss_tracker = LossTracker( qc_generator.num_data_qubits, 
-                                qc_generator.num_comp_ancillas + qc_generator.num_count_ancillas )
+                                qc_generator.num_comp_ancillas + qc_generator.num_count_ancillas,
+                                init_state=qc )
 
     # start "training"
-    for pp in trange(4):
+    for pp in trange(P):
         s_p = (pp+1)/P
         gamma_p = s_p*dt
         beta_p = (1-s_p)*dt
