@@ -27,9 +27,9 @@ import dqa
 # ----------------------
 
 # function to run -------------------
-def function_to_run(P, dt, **ignore ):
+def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
 
-    obj = dqa.mydQA('data/patterns_17-21.npy', P=P, dt=dt, max_bond=10)
+    obj = dqa.mydQA(datafile, P=P, dt=dt, max_bond=max_bond_dim)
     obj.init_fourier()
     obj.run(skip_jit=4)
 
@@ -41,11 +41,13 @@ def function_to_run(P, dt, **ignore ):
 #  NOTE: format as list of dictionaries, which will be passed to input function as arguments
 #
 parameter_combinations = [
-    {'P' : 100, 'dt' : np.round(dt,3) } for dt in np.arange(start = 0.1, stop=2.1, step = 0.1)
+    {'P' : 1000, 'dt' : np.round(dt,3), 'max_bond_dim' : 20, 'datafile' : 'data/patterns_8-10.3.npy'} 
+    for dt in np.arange(start = 0.1, stop=2.1, step = 0.1)
+    # default syntax: P,dt,max_bond_dim,datafile,output
 ]
 
 # target file to log results
-benchmark_file = 'test.csv'
+benchmark_file = 'test3.csv'
 
 
 

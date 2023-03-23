@@ -32,10 +32,11 @@ from quimb import tensor as qtn
 # ----------------------
 
 # function to run -------------------
-def function_to_run(P, dt, max_bond_dim, filepath_patterns, **ignore ):
-    
+def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
+    print('run', dt)
+
     # definition of parameters
-    csi_patterns = np.load(filepath_patterns).astype(int)
+    csi_patterns = np.load(datafile).astype(int)
     tau = P*dt
     N_csi, N = csi_patterns.shape
     d = 2
@@ -187,16 +188,16 @@ def compute_energy_density(psi, H_z_mu_K):
 #  NOTE: format as list of dictionaries, which will be passed to input function as arguments
 #
 parameter_combinations = [
-    {'P' : 1000,
+    {'P' : 100,
      'dt' : np.round(dt,3),
      'max_bond_dim' : 10,
-     'filepath_patterns' : 'patterns_17-21.npy' }
+     'datafile' : '../data/patterns_17-21.npy' }
     
-    for dt in np.arange(start = 1.0, stop=2.0, step = 0.1)
+    for dt in np.arange(start = 0.1, stop=2.1, step = 0.1)
 ]
 
 # target file to log results
-benchmark_file = 'test.csv'
+benchmark_file = 'testp.csv'
 
 
 

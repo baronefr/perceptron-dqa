@@ -45,7 +45,7 @@ def function_to_run(P, dt, max_bond, **ignore ):
 #  NOTE: format as list of dictionaries, which will be passed to input function as arguments
 #
 parameter_combinations = [
-    {'P' : 100, 'dt' : 1.0, 'max_bond' : int(mb) } for mb in np.arange(start = 80, stop=101, step = 20)
+    {'P' : 100, 'dt' : 1.0, 'max_bond' : int(mb) } for mb in [2, 4, 8, 10, 15]
 ]
 
 # target file to log results
