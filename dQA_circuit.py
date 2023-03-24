@@ -85,7 +85,7 @@ class HammingEvolution:
     
     @property
     def qc(self):
-        return self._qc
+        return self._qc.copy()
     
     @property
     def num_comp_ancillas(self):
@@ -263,7 +263,7 @@ if __name__== "__main__":
 
     # track losses
     loss_tracker = LossTracker( qc_generator.num_data_qubits, 
-                                qc_generator.num_comp_ancillas + qc_generator.num_count_ancillas,
+                                qc_generator.num_ancillas,
                                 init_state=qc )
 
     # start "training"
@@ -282,23 +282,19 @@ if __name__== "__main__":
             qc_Uz = qc_generator.U_z(train_data=csi_patterns[mu,:], gamma=gamma_p)
         
             # compose all circuits to evolve according to Uz
-            qc = qc.compose(qc_counter)
-            qc = qc.compose(qc_Uz)
-            qc = qc.compose(qc_counter_inverse)
+            qc.compose(qc_counter, inplace=True)
+            qc.compose(qc_Uz, inplace=True)
+            qc.compose(qc_counter_inverse, inplace=True)
 
         # create and apply Ux evolution circuit
         qc_Ux = qc_generator.U_x(beta_p)
-        qc = qc.compose(qc_Ux)
+        qc.compose(qc_Ux, inplace=True)
 
         # measure loss
         loss_tracker.track( [qc_counter, qc_Uz, qc_counter_inverse, qc_Ux], compose=True)
 
-
     
-    # print final results and losses
-    #finalstate = Statevector.from_instruction(qc)
-    #plot_histogram(finalstate.probabilities_dict(), number_to_keep=2**N_features)
-    
+    # printout final loss
     loss = loss_tracker.get_edensity(csi_patterns, little_endian=True)
     plt.plot(loss)
     plt.yscale('log')
