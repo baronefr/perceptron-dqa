@@ -82,10 +82,10 @@ class LossTracker:
             if type(qc) is list:
                 
                 for circuit in qc:
-                    self.current_qc = self.current_qc.compose(circuit)
+                    self.current_qc.compose(circuit, inplace=True)
                 
             elif type(qc) is QuantumCircuit:
-                self.current_qc = self.current_qc.compose(qc)
+                self.current_qc.compose(qc, inplace=True)
             else:
                 print('Error: type of qc is', type(qc))
                 return
@@ -129,7 +129,7 @@ class LossTracker:
 
     def __loss(self, statevec, h_perc):
 
-        return np.vdot(statevec, h_perc * statevec)
+        return np.real_if_close(np.vdot(statevec, h_perc * statevec))
 
     def get_losses(self, data, little_endian=True, labels=None):
 
@@ -160,7 +160,7 @@ class LossTracker:
     def get_edensity(self, data, little_endian=True, labels=None):
 
         losses = self.get_losses(data, little_endian=little_endian, labels=labels)
-        e0 = np.sort(self._h_perc)[0]
+        e0 = np.real_if_close(np.sort(self._h_perc)[0])
 
         return (losses-e0) / data.shape[1]
     
