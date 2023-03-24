@@ -31,7 +31,7 @@ def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
 
     obj = dQA_mps.mydQA(datafile, P=P, dt=dt, max_bond=max_bond_dim)
     obj.init_fourier()
-    obj.run(skip_jit=4)
+    obj.run(skip_jit=30)
 
     return np.real( obj.loss[-1][1] )
 
@@ -41,7 +41,7 @@ def function_to_run(P, dt, max_bond_dim, datafile, **ignore ):
 #  NOTE: format as list of dictionaries, which will be passed to input function as arguments
 #
 parameter_combinations = [
-    {'P' : 1000, 'dt' : np.round(dt,3), 'max_bond_dim' : 20, 'datafile' : 'data/patterns_8-10.3.npy'} 
+    {'P' : 1000, 'dt' : np.round(dt,3), 'max_bond_dim' : 10, 'datafile' : 'data/patterns_9-12.npy'} 
     for dt in np.arange(start = 0.1, stop=2.1, step = 0.1)
     # default syntax: P,dt,max_bond_dim,datafile,output
 ]

@@ -8,11 +8,10 @@
 # ----------------------------------------------------
 #   > description                                    |
 #
-#   testing the custom tenn functions, comparing
-#   with Quimb output
+#   numerical test of tenn module
 # ----------------------------------------------------
 #   coder : Barone Francesco
-#         :   github.com/baronefr/
+#         :   github.com/baronefr/perceptron-dqa/
 #   dated : 17 March 2023
 #     ver : 1.0.0
 # ====================================================

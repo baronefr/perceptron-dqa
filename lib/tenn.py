@@ -8,10 +8,10 @@
 # ----------------------------------------------------
 #   > description                                    |
 #
-#   library functions
+#   functions for tensor network operations
 # ----------------------------------------------------
 #   coder : Barone Francesco
-#         :   github.com/baronefr/
+#         :   github.com/baronefr/perceptron-dqa/
 #   dated : 17 March 2023
 #     ver : 1.0.0
 # ====================================================
@@ -22,7 +22,6 @@ import numpy as np
 from typing import List, Union
 import jax
 import jax.numpy as jnp
-from functools import partial
 import quimb.tensor as qtn
 
 
@@ -127,7 +126,7 @@ def make_rand_mpo_complex(N : int, bond_dim = 1):
 
 
 def make_rand_mps_complex(N : int, bond_dim = 1):
-    """Return a random (complex128) MPS in format (l,r,phys)."""
+    """Return a random (complex128) MPS in format (l,phys,r)."""
 
     assert N > 1
 
@@ -182,8 +181,8 @@ def right_canonize(mps : List[np.ndarray], site : int) ->  List[np.ndarray]:
     assert site < len(mps)
     assert site >= 1
 
-    # create a copy to be modified FIXME
-    mps = [ el for el in mps ]
+    # create a copy to be modified
+    #mps = [ el.copy() for el in mps ]  # INFO: copy is deprecated due to high memory usage
 
     # loop over each site, from last to second
     for n in reversed(range(site, len(mps))):
@@ -202,6 +201,7 @@ def right_canonize(mps : List[np.ndarray], site : int) ->  List[np.ndarray]:
 
 #  FIXME
 def normalize_onesite(A, A_next):
+    raise DeprecationWarning('this function is not updated to work on lpr tensors')
     A_mat = np.transpose(A, (0, 2, 1)).reshape((-1, A.shape[1]))
     U, S, V = np.linalg.svd(A_mat, full_matrices=False)
     A = np.transpose(U.reshape((A.shape[0], A.shape[2], A.shape[1])), (0, 2, 1))
@@ -210,6 +210,7 @@ def normalize_onesite(A, A_next):
 
 #  FIXME
 def normalize_mps_via_svd(mps):
+    raise DeprecationWarning('this function is not updated to work on lpr tensors')
     N = len(mps)
     for l in range(N):
         if l == N - 1:

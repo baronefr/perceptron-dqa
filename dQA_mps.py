@@ -8,10 +8,10 @@
 # ----------------------------------------------------
 #   > description                                    |
 #
-#   class setup of dQA execution
+#   dQA class for perceptron hamiltonian
 # ----------------------------------------------------
 #   coder : Barone Francesco, Zinesi Paolo
-#         :   github.com/baronefr/
+#         :   github.com/baronefr/perceptron-dqa/
 #   dated : 17 March 2023
 #     ver : 1.0.0
 # ====================================================
@@ -57,19 +57,20 @@ class mydQA():
 
         self.pp = 0 # internal steps counter
 
-    def init_fourier(self):
+    def init_fourier(self) -> None:
         self.Uk_FT = np.zeros((self.N+1,self.P), dtype=np.complex128)
         for p in range(0,self.P):
             self.Uk_FT[:,p] = fft.fft( np.exp(-1.0j*((p+1)/self.P)*(self.dt)*PerceptronHamiltonian.f_perceptron(range(self.N+1), self.N)), norm="ortho")
         self.fxft = fft.fft( PerceptronHamiltonian.f_perceptron(range(self.N+1), self.N), norm="ortho" )
 
-    def compute_loss(self, psi):
+    def compute_loss(self, psi) -> float:
         N_tens = len(psi)
         eps = 0.0
         for mu in range(self.N_xi):
             for kk in range(self.N+1):
                 mpo = PerceptronHamiltonian.Hz_mu_singleK(self.N, mu, kk, self.fxft, self.dataset)
-                # TODO: eventually store these matrices, since they are all the same
+                # TODO: you could store these matrices, since they are all the same, 
+                # to avoid computing them again... but it is a very negligible optimization
 
                 psiH = apply_mpsmpo(psi, mpo)
 
@@ -78,8 +79,8 @@ class mydQA():
         return eps[0,0]
 
 
-    def single_step(self):
-
+    def single_step(self) -> float:
+        """Run a single step of dQA algorithm."""
         psi = self.psi
 
         s_p = (self.pp+1)/self.P
@@ -116,12 +117,21 @@ class mydQA():
         return expv
 
 
-    def run(self, skip_jit = None) -> float:
+    def run(self, skip_jit = 0, print_info : bool = True) -> None:
+        """
+        Run the dQA (via TN) simulation for the current configuration.
 
-        print('dQA---')
-        print(' tau = {}, P = {}, dt = {}'.format(self.tau, self.P, self.dt) )
-        print(' max bd =', self.max_bond)
-        print(' dataset :  N = {}, N_xi = {}'.format(self.N, self.N_xi) )
+        Parameters
+        ----------
+        skip_jit : int
+            How many iterations will be executed without jitting the routines.
+        """
+
+        if print_info:
+            print('dQA info ---')
+            print(' tau = {}, P = {}, dt = {}'.format(self.tau, self.P, self.dt) )
+            print(' max bd =', self.max_bond)
+            print(' dataset :  N = {}, N_xi = {}'.format(self.N, self.N_xi) )
         
         # initialize state and internal counter
         self.psi = [ np.array([[[2**-0.5], [2**-0.5]]], dtype=np.complex128) ] * self.N
@@ -137,7 +147,9 @@ class mydQA():
         pbar = tqdm(total=self.P, desc='QAnnealing')
 
         # exe without jit (useful at the beginning...)
-        if skip_jit is not None:
+        if skip_jit < 1:
+                assert skip_jit <= self.P, 'skip_jit cannot exceed total number of steps P'
+
                 config.update('jax_disable_jit', True)
                 for _ in range(skip_jit):
                     expv = self.single_step()
@@ -158,6 +170,17 @@ class mydQA():
                     # etc
                     pbar.update(1)
                     pbar.set_postfix_str("loss = {}, bd = {}".format( np.around(expv, 5), self.bd_monitor[-1] ) )
+
+
+    def plot_loss(self):
+        """
+        Plot the loss stored in the current simulation object.
+        """
+
+        plt.plot( *zip( *np.real_if_close(self.loss) ) )
+        plt.yscale('log')
+        plt.title('dQA')
+        return plt
 # %%
 
 
@@ -165,6 +188,6 @@ class mydQA():
 if __name__== "__main__":
     obj = mydQA('data/patterns_17-21.1.npy', 100, 1, max_bond=10)
     obj.init_fourier()
-    obj.run(skip_jit=4)
-    plot_loss( obj.loss )
+    obj.run(skip_jit = 4)
+    obj.plot_loss().show()
 

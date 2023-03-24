@@ -8,14 +8,14 @@
 # ----------------------------------------------------
 #   > description                                    |
 #
-#   main functions for dQA: hamiltonians, MPOs,
-#   dataset, ...
+#   dQA utilities: perceptron hamiltonian tools
 # ----------------------------------------------------
 #   coder : Barone Francesco, Zinesi Paolo
-#         :   github.com/baronefr/
+#         :   github.com/baronefr/perceptron-dqa/
 #   dated : 17 March 2023
 #     ver : 1.0.0
 # ====================================================
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -106,9 +106,7 @@ class PerceptronHamiltonian:
                 tens[0,0,s_i,s_i] = np.power(f_FT_[K]/np.sqrt(N+1), 1/N) * np.exp(1.0j * (np.pi/(N+1)) * K * (1-patterns[mu,i-1]*(-1)**s_i))
             Hz_i.append(tens)
 
-        #Hz = qtn.MPO_product_operator(Hz_i)#, upper_ind_id='u{}', lower_ind_id='s{}')
         return Hz_i
-
 
 
 def create_dataset(N : int, features : int):
@@ -116,9 +114,3 @@ def create_dataset(N : int, features : int):
     x = np.random.randint(2, size=(N, features))
     x[ x == 0 ] = -1  # data is encoded as +- 1
     return x
-
-def plot_loss(loss):
-    plt.plot( *zip( *np.real_if_close(loss) ) )
-    plt.yscale('log')
-    plt.title('dQA')
-    return plt

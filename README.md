@@ -1,13 +1,14 @@
-<h1 align="center"> <b>digitized Quantum Annealing for perceptron Hamiltonian</b> </h1>
+<h1 align="center"> <b>digitized Quantum Annealing via TN simulations</b> </h1>
 
 <p align="center"><b>Project</b> // Barone Francesco, Coppi Alberto, Zinesi Paolo<br></p>
 
 
+TODO
 
 
+### Setup
 
-
-
+TODO
 
 
 
