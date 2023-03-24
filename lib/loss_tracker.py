@@ -118,18 +118,19 @@ class LossTracker:
 
         # convert statevectors to arrays, keep only qubits of interest
         arr_list = []
-        for state in self._statevecs:
+        for state in tqdm(self._statevecs, desc='finalizing LossTracker'):
             out_red = qi.partial_trace(state, range(self.n_qubits, self.n_qubits + self.n_ancillae))
             prob, st_all = np.linalg.eig(out_red.data)
             idx    = np.argmax(prob) 
-            arr_list.append(st_all[:, idx])
+            arr_list.append(st_all[:, idx].copy())
+            del out_red, prob, st_all, idx
 
         self._statevecs_arr = np.stack(arr_list)
-        del out_red, prob, st_all, idx, arr_list
+        del  arr_list
 
     def __loss(self, statevec, h_perc):
 
-        return np.real_if_close(np.vdot(statevec, h_perc * statevec))
+        return np.vdot(statevec, h_perc * statevec)
 
     def get_losses(self, data, little_endian=True, labels=None):
 
@@ -153,9 +154,10 @@ class LossTracker:
                 # invert data components if the circuit was constructed in big endian mode
                 # NOT SURE IF THIS WORKS
                 self._h_perc = H_perc_diag(data[:,::-1], labels)
+            self._little_endian = little_endian
            
            
-        return np.apply_along_axis(self.__loss, axis=1, arr=self._statevecs_arr, h_perc=self._h_perc)
+        return np.real_if_close(np.apply_along_axis(self.__loss, axis=1, arr=self._statevecs_arr, h_perc=self._h_perc))
     
     def get_edensity(self, data, little_endian=True, labels=None):
 
