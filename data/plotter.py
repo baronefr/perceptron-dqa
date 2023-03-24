@@ -120,10 +120,10 @@ plt.title('numpy MPS ($N = 21$)')
 
 
 # %% [markdown]
-# # smaller dataset (N=10)
+# # smaller dataset (N=12)
 #  this case allows to compare with ED on our modest PCs
 
-exact_diag = pd.read_csv('benchmark/ED_8-10.csv')
+exact_diag = pd.read_csv('benchmark/ED_9-12.csv')
 exact_diag_100 = exact_diag[ exact_diag['P'] == 100 ]
 exact_diag_1000 = exact_diag[ exact_diag['P'] == 1000 ]
 
@@ -133,44 +133,14 @@ plt.yscale('log')
 plt.legend()
 plt.ylabel(r"$\varepsilon(1)$")
 plt.xlabel(r"$\delta t$")
-plt.title('exact diagonalization ($N = 10$)')
-
-
-
-
-
-# %% quimb backend
-
-mps_npy = pd.read_csv('benchmark/quimb_8-10.csv')
-mps_npy_100 = mps_npy[  mps_npy['P'] == 100 ]
-mps_npy_1000 = mps_npy[  mps_npy['P'] == 1000 ]
-
-# MPS plots
-plt.scatter(mps_npy_100['dt'], mps_npy_100['output'], linewidth=3, marker='*', s=120,
-            c=color_palette[0], label='MPS $P=100$')
-plt.plot(mps_npy_100['dt'], mps_npy_100['output'], linewidth=1, c=color_palette[0])
-
-plt.scatter(mps_npy_1000['dt'], mps_npy_1000['output'], linewidth=3, marker='s', s=100,
-            c=color_palette[1], label='MPS $P=1000$')
-plt.plot(mps_npy_1000['dt'], mps_npy_1000['output'], linewidth=1, c=color_palette[1])
-
-# compare with ED
-plt.plot(exact_diag_100['dt'], exact_diag_100['output'], linewidth=3, c=color_palette[0], label='ED $P=100$')
-plt.plot(exact_diag_1000['dt'], exact_diag_1000['output'], linewidth=3, c=color_palette[1], label='ED $P=1000$')
-
-plt.yscale('log')
-plt.tight_layout()
-plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
-plt.ylabel(r"$\varepsilon(1)$")
-plt.xlabel(r"$\delta t$")
-plt.title('quimb MPS ($N = 10$)')
+plt.title('exact diagonalization ($N = 12$)')
 
 
 
 
 # %% numpy backend
 
-mps_npy = pd.read_csv('benchmark/numpy_8-10_2.csv') # use this dataset for comparison with single shot
+mps_npy = pd.read_csv('benchmark/numpy_9-12.csv') # use this dataset for comparison with single shot
 mps_npy_100 = mps_npy[  mps_npy['P'] == 100 ]
 mps_npy_1000 = mps_npy[  mps_npy['P'] == 1000 ]
 
@@ -191,7 +161,7 @@ plt.tight_layout()
 plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
 plt.ylabel(r"$\varepsilon(1)$")
 plt.xlabel(r"$\delta t$")
-plt.title('numpy MPS ($N = 10$)')
+plt.title('numpy MPS ($N = 12$) (single shot)')
 
 
 
