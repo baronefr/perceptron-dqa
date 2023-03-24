@@ -82,10 +82,10 @@ class LossTracker:
             if type(qc) is list:
                 
                 for circuit in qc:
-                    self.current_qc = self.current_qc.compose(circuit)
+                    self.current_qc.compose(circuit, inplace=True)
                 
             elif type(qc) is QuantumCircuit:
-                self.current_qc = self.current_qc.compose(qc)
+                self.current_qc.compose(qc, inplace=True)
             else:
                 print('Error: type of qc is', type(qc))
                 return
