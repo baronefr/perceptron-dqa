@@ -140,7 +140,7 @@ plt.title('exact diagonalization ($N = 12$)')
 
 # %% numpy backend
 
-mps_npy = pd.read_csv('benchmark/numpy_9-12.csv') # use this dataset for comparison with single shot
+mps_npy = pd.read_csv('benchmark/numpy_9-12.1.csv') # use this dataset for comparison with single shot
 mps_npy_100 = mps_npy[  mps_npy['P'] == 100 ]
 mps_npy_1000 = mps_npy[  mps_npy['P'] == 1000 ]
 
@@ -173,9 +173,9 @@ plt.title('numpy MPS ($N = 12$) (single shot)')
 # %% numpy backend, but averaged
 
 files = [
-    'benchmark/numpy_8-10_1.csv',
-    'benchmark/numpy_8-10_2.csv',
-    'benchmark/numpy_8-10_3.csv'
+    'benchmark/numpy_9-12.1.csv',
+    'benchmark/numpy_9-12.2.csv',
+    'benchmark/numpy_9-12.3.csv'
 ]
 
 tmp_100 = []
@@ -206,39 +206,11 @@ plt.plot(bak_dt, data_1000, linewidth=0.6, c=color_palette[1])
 plt.plot(exact_diag_100['dt'], exact_diag_100['output'], linewidth=3, c=color_palette[0], label='ED $P=100$')
 plt.plot(exact_diag_1000['dt'], exact_diag_1000['output'], linewidth=3, c=color_palette[1], label='ED $P=1000$')
 
-#plt.plot(data_1000, linewidth=.8, c=color_palette[1])
 plt.yscale('log')
 plt.legend()
-plt.title('numpy averaged comparison ($N=10$)')
+plt.title('numpy averaged comparison ($N=12$)')
 
 
-
-
-
-# %% test with 9-12
-
-mps_npy = pd.read_csv('benchmark/numpy_9-12.csv') # use this dataset for comparison with single shot
-mps_npy_100 = mps_npy[  mps_npy['P'] == 100 ]
-mps_npy_1000 = mps_npy[  mps_npy['P'] == 1000 ]
-
-
-plt.scatter(mps_npy_100['dt'], mps_npy_100['output'], linewidth=3, marker='*', s=120,
-            c=color_palette[0], label='MPS $P=100$')
-plt.plot(mps_npy_100['dt'], mps_npy_100['output'], linewidth=1, c=color_palette[0])
-
-plt.scatter(mps_npy_1000['dt'], mps_npy_1000['output'], linewidth=3, marker='s', s=100,
-            c=color_palette[1], label='MPS $P=1000$')
-plt.plot(mps_npy_1000['dt'], mps_npy_1000['output'], linewidth=1, c=color_palette[1])
-
-plt.plot(exact_diag_100['dt'], exact_diag_100['output'], linewidth=3, c=color_palette[0], label='ED $P=100$')
-plt.plot(exact_diag_1000['dt'], exact_diag_1000['output'], linewidth=3, c=color_palette[1], label='ED $P=1000$')
-
-plt.yscale('log')
-plt.tight_layout()
-plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
-plt.ylabel(r"$\varepsilon(1)$")
-plt.xlabel(r"$\delta t$")
-plt.title('numpy MPS ($N = 12$)')
 
 
 
@@ -307,4 +279,57 @@ plt.title('deviation from mean ($N = 21$, $P = 100$)')
 
 # %%
 
+ed = np.load('benchmark/ed_9-12_loss/loss_history_20230324093415_P100_dt0.1_E0.0.npy')
+ed = np.concatenate( (np.array([ed[0]]), ed) ) # fix missing value of ED benchmark for s=0
 
+files = [
+    'benchmark/numpy_9-12_loss/dt0.1_bd10.npy',
+    'benchmark/numpy_9-12_loss/dt0.1_bd20.npy',
+    'benchmark/numpy_9-12_loss/dt0.1_bd40.npy',
+    'benchmark/numpy_9-12_loss/dt0.1_bd60.npy',
+    'benchmark/numpy_9-12_loss/dt0.1_bd80.npy',
+]
+labels = [ '10', '20', '40', '60','80']
+
+bd_data = []
+for f in files:
+    bd_data.append( np.load(f) )
+
+for ii, curve in enumerate(bd_data):
+    plt.plot( np.linspace(0,1,len(curve)), curve, label="${}$".format(labels[ii]),
+              color = cmap((ii)/len(bd_data)), linewidth=2,
+    )
+
+plt.plot(np.linspace(0,1,len(ed)), ed, label='ED', c='k')
+plt.yscale('log')
+plt.ylabel(r"$\varepsilon(s)$")
+plt.xlabel(r"$s$")
+plt.legend()
+plt.title("$N = 12$")
+
+
+
+# %% [markdown]
+# ## single dQA plots
+
+ed = np.load('benchmark/ed_9-12_loss/loss_history_20230324100157_P100_dt0.5_E0.0.npy')
+
+plt.plot( np.linspace(0,1,len(ed)), ed)
+plt.yscale('log')
+plt.ylabel(r"$\varepsilon(s)$")
+plt.xlabel(r"$s$")
+plt.title('Exact Diagonalization')
+
+
+# %%
+
+mps = np.load('benchmark/numpy_9-12_loss/dt0.5_bd10.npy')
+
+plt.plot( np.linspace(0,1,len(mps)), mps)
+plt.yscale('log')
+plt.ylabel(r"$\varepsilon(s)$")
+plt.xlabel(r"$s$")
+plt.title('MPS')
+
+
+# %%
