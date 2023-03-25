@@ -312,7 +312,7 @@ plt.title("$N = 12$")
 # %% [markdown]
 # ## single dQA plots
 
-ed = np.load('benchmark/ed_9-12_loss/loss_history_20230324151215_P1000_dt1.0_E0.0.npy')
+ed = np.load('benchmark/ed_9-12_loss/loss_history_20230324100157_P100_dt0.5_E0.0.npy')
 
 plt.plot( np.linspace(0,1,len(ed)), ed)
 plt.yscale('log')
