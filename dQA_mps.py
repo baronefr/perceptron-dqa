@@ -41,6 +41,8 @@ class mydQA():
 
         if device is None:
             self.device = jax.devices('cpu')[0]
+        else:
+            self.device = device
         
         if isinstance(dataset, str):
             self.dataset = np.load(dataset)
@@ -69,7 +71,7 @@ class mydQA():
         for mu in range(self.N_xi):
             for kk in range(self.N+1):
                 mpo = PerceptronHamiltonian.Hz_mu_singleK(self.N, mu, kk, self.fxft, self.dataset)
-                # TODO: you could store these matrices, since they are all the same, 
+                # NOTE: you could store these matrices, since they are all the same, 
                 # to avoid computing them again... but it is a very negligible optimization
 
                 psiH = apply_mpsmpo(psi, mpo)
@@ -186,8 +188,11 @@ class mydQA():
 
 #    usage example:
 if __name__== "__main__":
-    obj = mydQA('data/patterns_17-21.1.npy', 100, 1, max_bond=10)
+    dev = jax.devices('gpu')[0] # set preferred device (default is CPU)
+    obj = mydQA('data/patterns_9-12.npy', 100, 1, max_bond=10, device=dev)
+
     obj.init_fourier()
-    obj.run(skip_jit = 4)
+    obj.run(skip_jit = 0)
+
     obj.plot_loss().show()
 
