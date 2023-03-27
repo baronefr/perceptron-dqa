@@ -332,4 +332,38 @@ plt.xlabel(r"$s$")
 plt.title('MPS')
 
 
+
+
+# %% [markdown]
+# ## execution time benchmarks
+
+bdata = pd.read_csv('benchmark/bench.csv')
+bdf_bybackend = bdata.pivot_table(index = ['backend'], 
+                      columns = ['bd'], values = 'time')
+bdf_bybond = bdata.pivot_table(index = ['bd'], columns = ['backend'], values = 'time')
+
+
+# %%
+
+cmap = plt.get_cmap('plasma')
+
+ax = bdf_bybackend.plot.barh(figsize=(9,7), color = [cmap(ii/4) for ii in range(5) ] )
+ax.legend(loc='upper right', title=r"$\chi$", ncol=3)
+ax.set_xlabel(r"time per iteration [$s/it$]")
+
+
+# %%
+
+ax = bdf_bybond.plot.barh(figsize=(9,7), rot=0, 
+                         color=['red', 'darkorange', 'gold', 'dodgerblue', 'deeppink'],
+                        edgecolor='white', linewidth=1, width=0.83
+)
+ax.set_ylabel(r"$\chi$")
+ax.set_xlabel(r"time per iteration [$s/it$]")
+#ax.legend(loc='upper center', bbox_to_anchor=(0.45, -0.24), fancybox=True, 
+#        ncol=2, prop={'size': 18} )
+ax.legend(loc='lower right', prop={'size': 22})
+plt.tight_layout()
+
+
 # %%
