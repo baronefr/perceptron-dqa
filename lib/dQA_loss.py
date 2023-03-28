@@ -52,12 +52,11 @@ def Hz_mu_singleK_with_ancilla(N, mu, K, f_FT_, patterns, extra_ancillary):
 
 class mydQA_ancilla(mydQA):
 
-    def __init__(self, dataset, P : int, dt : float, device = None, n_ancilla : int = 0, flip_endian : bool = False):
+    def __init__(self, dataset : np.ndarray, P : int, dt : float, device = None, n_ancilla : int = 0, flip_endian : bool = False):
 
         assert n_ancilla >= 0, 'number of ancillas must be non negative'
 
-        if flip_endian:
-            dataset = dataset[:,::-1]
+        if flip_endian:  dataset = dataset.copy()[:,::-1]
 
         # initialize the mother class and call the fourier transform right now
         super().__init__(dataset, P, dt, 10, device)
@@ -70,7 +69,7 @@ class mydQA_ancilla(mydQA):
         eps = 0.0
         for mu in range(self.N_xi):
             for kk in range(self.N+1):
-                mpo = Hz_mu_singleK_with_ancilla(self.N, mu, kk, self.fxft, self.dataset, self.n_ancilla)
+                mpo = Hz_mu_singleK_with_ancilla(self.N, mu, kk, self.fxft, self.dataset[:,::-1], self.n_ancilla)
 
                 psiH = apply_mpsmpo(psi, mpo)
 

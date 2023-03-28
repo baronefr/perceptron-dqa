@@ -241,7 +241,7 @@ if __name__== "__main__":
 
     # initializations
     N_xi, N_features = 5, 7
-    csi_patterns = np.random.choice([1,-1], size=(N_xi, N_features))
+    csi_patterns = np.load('test.npy') #np.random.choice([1,-1], size=(N_xi, N_features))
     labels = np.ones( (N_xi,) )
 
     # loop variables

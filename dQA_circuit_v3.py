@@ -27,11 +27,12 @@ from lib.loss_tracker import *
 from lib.dQA_loss import *
 
 import qtealeaves.observables as obs
-from qmatchatea import QCConvergenceParameters, QCOperators, QCBackend
+from qmatchatea import QCOperators, QCBackend
+from qmatchatea.utils import QCConvergenceParameters
 from qmatchatea.py_emulator import run_py_simulation
+from qmatchatea.qk_utils import qk_transpilation_params
 
-
-
+from qtealeaves.emulator import MPS
 
 # %%
 
@@ -119,9 +120,9 @@ class mydQA_circuit:
         sigma_z = np.array([[1, 0], [0, -1]])
         operators.ops["sz"] = sigma_z
         observables = obs.TNObservables()
-        observables += obs.TNObsBondEntropy()
-        observables += obs.TNState2File("state.txt", "F")
-        observables += obs.TNObsLocal('label', 'sz')
+        #observables += obs.TNObsBondEntropy()
+        observables += obs.TNState2File("state.txt", "C") # NOTE: mandatory to get the MPS in output dictionary
+        #observables += obs.TNObsLocal('label', 'sz')
         conv_params = QCConvergenceParameters(max_bond_dimension=max_bond, singval_mode="C")
         backend = QCBackend(backend="PY")
 
@@ -130,15 +131,29 @@ class mydQA_circuit:
             convergence_parameters=conv_params,
             operators=operators,
             observables=observables,
+            transpilation_parameters = qk_transpilation_params(linearize=False),
             backend=backend
         )
+
+        self.final_state = res.observables["mps_state"]
+
+        # from documentation -----------------
+        #   linearize: bool, optional
+        # If True use qiskit transpiler to linearize the circuit. Default to True.
+        #   basis_gates: list, optional
+        # If not empty decompose using qiskit transpiler into basis gate set
+        #   optimization: intger, optional
+        # Level of optimization in qiskit transpiler. Default to 3.
+        #  tensor_compiler: bool, optional
+        # If True, contract all the two-qubit gates before running the experiment.
+        # Default to True.
 
         print('computing loss')
         loss_obj = mydQA_ancilla(self.dataset, P, dt, 
             n_ancilla=self.qc_generator.num_count_ancillas,
             flip_endian=True
         )
-        self.loss.append( loss_obj.compute_loss( res.observables["mps_state"] ) )
+        self.loss.append( loss_obj.compute_loss( self.final_state ) )
 
         return self.loss
 
@@ -149,14 +164,9 @@ class mydQA_circuit:
 
     def _run_matcha_stepbystep(self, max_bond = 10):
         assert self.backend == 'matcha_single_step', 'not valid backend! please use {}'.format(self.backend)
-        print('WARNING: run experimental matcha step by step')  # FIXME
-
 
         # retrieve simulation parameters
         P, dt  = self.annealing_param['P'], self.annealing_param['dt']
-
-        # initialize the circuit
-        qc = self.qc_generator.init_state_plus()
 
         # define matcha simulation observables and parameters
         operators = QCOperators()
@@ -172,6 +182,12 @@ class mydQA_circuit:
         self.loss = []
         initial_state = None # save here the state (MPS) at each step
 
+        observables = obs.TNObservables()
+        #observables += obs.TNObsBondEntropy()
+        observables += obs.TNState2File("state.txt", "C")
+        #observables += obs.TNObsLocal('label', 'sz')
+        conv_params = QCConvergenceParameters(max_bond_dimension=max_bond, singval_mode="C")
+        backend = QCBackend(backend="PY")
 
         # build the full circuit
         for pp in trange(P, desc='execute dQA steps'):
@@ -179,26 +195,27 @@ class mydQA_circuit:
             gamma_p = s_p*dt
             beta_p = (1-s_p)*dt
 
-            qc = self.qc_generator.single_step_composer(qc, self.dataset, beta_p, gamma_p)
+            qc = self.qc_generator.single_step_composer(
+                self.qc_generator.init_state_plus() if pp == 0 else None, 
+                self.dataset, beta_p, gamma_p
+            )
 
-            observables = obs.TNObservables()
-            observables += obs.TNObsBondEntropy()
-            observables += obs.TNState2File("state.txt", "F")
-            observables += obs.TNObsLocal('label', 'sz')
-            conv_params = QCConvergenceParameters(max_bond_dimension=max_bond, singval_mode="C")
-            backend = QCBackend(backend="PY")
-
-            # ref : https://quantum_matcha_tea.baltig-pages.infn.it/py_api_quantum_matcha_tea/chapters/py_emulator.html#qmatchatea.py_emulator.run_py_simulation
-            res = run_py_simulation( qc,
+            # simulation ref : https://quantum_matcha_tea.baltig-pages.infn.it/py_api_quantum_matcha_tea/chapters/py_emulator.html#qmatchatea.py_emulator.run_py_simulation
+            # INFO: requires the fix of matcha library!
+            #     
+            #   fix line 840 of file  qtealeaves.emulator.mps_simulator.py  as
+            # obj = cls(len(tensor_list), 0, conv_params, local_dim)
+            res = run_py_simulation( qc, 
                 convergence_parameters=conv_params,
                 operators=operators,
                 observables=observables,
                 initial_state = initial_state,
+                #transpilation_parameters = qk_transpilation_params(linearize=False),
                 backend=backend
             )
 
             initial_state = res.observables["mps_state"]
-            #initial_state = [ np.array(el) for el in initial_state ]
+            self.final_state = initial_state
             self.loss.append( loss_obj.compute_loss( initial_state ) )
 
         return self.loss
@@ -211,12 +228,15 @@ class mydQA_circuit:
 
 if __name__== "__main__":
 
-    # create a dataset
-    N_xi, N_features = 5, 7
-    csi_patterns = np.random.choice([1,-1], size=(N_xi, N_features))
+    # create a dataset...
+    #N_xi, N_features = 12, 15
+    #csi_patterns = np.random.choice([1,-1], size=(N_xi, N_features))
+    # ... or load it from file
+    csi_patterns = np.load('data/patterns_12-15.npy')
+    csi_patterns = csi_patterns[0:5,:]  # crop dataset
 
     # initialize the dQA wrapper
-    dd = mydQA_circuit(csi_patterns, P = 100, dt = 1, backend = 'matcha')
+    dd = mydQA_circuit(csi_patterns, P = 100, dt = 1.0, backend = 'matcha_single_step') # 1.0 ok... 0.7 meglio
 
     # run the simulation
     loss = dd.run()
@@ -226,7 +246,6 @@ if __name__== "__main__":
     plt.plot(loss)
     plt.yscale('log')
     plt.show()
-
 
 
 # %%

@@ -227,6 +227,8 @@ class HammingEvolution:
     def single_step_composer(self, qc, dataset, beta_p : float, gamma_p : float, tracking_function = None):
         """Define how a circuit is composed for each step in dQA."""
 
+        if qc is None: qc = self.qc.copy()
+
         for mu in range( dataset.shape[0] ):
         
             # create Hamming error counter circuit based on the given pattern
