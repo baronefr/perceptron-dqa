@@ -31,6 +31,8 @@ plt.rcParams['figure.figsize'] = (9,6)
 
 color_palette = ['#006ec2', '#ff7b00']
 
+FILE_PREFIX = '../img/'
+DO_SAVEFIG = True
 
 # %% utilities
 
@@ -79,6 +81,7 @@ plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol
 plt.ylabel(r"$\varepsilon(1)$")
 plt.xlabel(r"$\delta t$")
 plt.title('quimb MPS ($N = 21$)')
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'quimb-21.svg', transparent=True)
 
 
 # %% numpy backend
@@ -110,7 +113,7 @@ plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol
 plt.ylabel(r"$\varepsilon(1)$")
 plt.xlabel(r"$\delta t$")
 plt.title('numpy MPS ($N = 21$)')
-
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'numpy-21.svg', transparent=True)
 
 
 
@@ -134,7 +137,7 @@ plt.legend()
 plt.ylabel(r"$\varepsilon(1)$")
 plt.xlabel(r"$\delta t$")
 plt.title('exact diagonalization ($N = 12$)')
-
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'ed-12.svg', transparent=True)
 
 
 
@@ -161,8 +164,8 @@ plt.tight_layout()
 plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
 plt.ylabel(r"$\varepsilon(1)$")
 plt.xlabel(r"$\delta t$")
-plt.title('numpy MPS ($N = 12$) (single shot)')
-
+plt.title('numpy MPS ($N = 12$)')
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'numpy-12.svg', transparent=True)
 
 
 
@@ -209,7 +212,7 @@ plt.plot(exact_diag_1000['dt'], exact_diag_1000['output'], linewidth=3, c=color_
 plt.yscale('log')
 plt.legend()
 plt.title('numpy averaged comparison ($N=12$)')
-
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'numpy-12_averaged.svg', transparent=True)
 
 
 
@@ -254,6 +257,7 @@ plt.xlabel(r"$s$")
 plt.yscale('log')
 plt.legend()
 plt.title('bond dimension check ($N = 21$, $P = 100$)')
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bond_dim-21.svg', transparent=True)
 
 
 # %% plotting deviation curves
@@ -270,7 +274,7 @@ plt.ylabel(r"$\Delta\varepsilon(s)$")
 plt.xlabel(r"$s$")
 plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=5)
 plt.title('deviation from mean ($N = 21$, $P = 100$)')
-
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bond_dim-21_delta.svg', transparent=True)
 
 
 
@@ -306,7 +310,7 @@ plt.ylabel(r"$\varepsilon(s)$")
 plt.xlabel(r"$s$")
 plt.legend()
 plt.title("$N = 12$")
-
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bond_dim-12.svg', transparent=True)
 
 
 # %% [markdown]
@@ -350,7 +354,7 @@ cmap = plt.get_cmap('plasma')
 ax = bdf_bybackend.plot.barh(figsize=(9,7), color = [cmap(ii/4) for ii in range(5) ] )
 ax.legend(loc='upper right', title=r"$\chi$", ncol=3)
 ax.set_xlabel(r"time per iteration [$s/it$]")
-
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bench-by-backend.svg', transparent=True)
 
 # %%
 
@@ -364,6 +368,6 @@ ax.set_xlabel(r"time per iteration [$s/it$]")
 #        ncol=2, prop={'size': 18} )
 ax.legend(loc='lower right', prop={'size': 22})
 plt.tight_layout()
-
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bench-by-bond.svg', transparent=True)
 
 # %%
