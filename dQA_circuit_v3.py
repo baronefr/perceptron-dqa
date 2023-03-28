@@ -233,10 +233,10 @@ if __name__== "__main__":
     #csi_patterns = np.random.choice([1,-1], size=(N_xi, N_features))
     # ... or load it from file
     csi_patterns = np.load('data/patterns_12-15.npy')
-    csi_patterns = csi_patterns[0:5,:]  # crop dataset
+    #csi_patterns = csi_patterns[0:5,:]  # crop dataset (optional)
 
     # initialize the dQA wrapper
-    dd = mydQA_circuit(csi_patterns, P = 100, dt = 1.0, backend = 'matcha_single_step') # 1.0 ok... 0.7 meglio
+    dd = mydQA_circuit(csi_patterns, P = 100, dt = 0.7, backend = 'matcha_single_step')
 
     # run the simulation
     loss = dd.run()
