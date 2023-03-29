@@ -76,12 +76,11 @@ plt.plot(mps_qtn_1000['dt'], mps_qtn_1000['output'], linewidth=2, linestyle='--'
 
 # plot setup
 plt.yscale('log')
-plt.tight_layout()
-plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
+lgd = plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
 plt.ylabel(r"$\varepsilon(1)$")
 plt.xlabel(r"$\delta t$")
 plt.title('quimb MPS ($N = 21$)')
-if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'quimb-21.svg', transparent=True)
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'quimb-21.svg', transparent=True, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 # %% numpy backend
@@ -108,12 +107,11 @@ symbols_line(plt,mps_npy_1000['dt'], mps_npy_1000['output'], color = color_palet
 
 # plot setup
 plt.yscale('log')
-plt.tight_layout()
-plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
+lgd = plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
 plt.ylabel(r"$\varepsilon(1)$")
 plt.xlabel(r"$\delta t$")
 plt.title('numpy MPS ($N = 21$)')
-if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'numpy-21.svg', transparent=True)
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'numpy-21.svg', transparent=True, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 
@@ -160,12 +158,11 @@ plt.plot(exact_diag_100['dt'], exact_diag_100['output'], linewidth=3, c=color_pa
 plt.plot(exact_diag_1000['dt'], exact_diag_1000['output'], linewidth=3, c=color_palette[1], label='ED $P=1000$')
 
 plt.yscale('log')
-plt.tight_layout()
-plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
+lgd = plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=2)
 plt.ylabel(r"$\varepsilon(1)$")
 plt.xlabel(r"$\delta t$")
 plt.title('numpy MPS ($N = 12$)')
-if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'numpy-12.svg', transparent=True)
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'numpy-12.svg', transparent=True, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 
@@ -260,6 +257,7 @@ plt.title('bond dimension check ($N = 21$, $P = 100$)')
 if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bond_dim-21.svg', transparent=True)
 
 
+
 # %% plotting deviation curves
 
 data_matrix = np.matrix(bd_data)
@@ -272,9 +270,9 @@ for ii, curve in enumerate(bd_data):
 
 plt.ylabel(r"$\Delta\varepsilon(s)$")
 plt.xlabel(r"$s$")
-plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=5)
+lgd = plt.legend(loc='upper center', bbox_to_anchor=(0.45, -0.15), fancybox=True, ncol=5)
 plt.title('deviation from mean ($N = 21$, $P = 100$)')
-if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bond_dim-21_delta.svg', transparent=True)
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bond_dim-21_delta.svg', transparent=True, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 
@@ -351,9 +349,10 @@ bdf_bybond = bdata.pivot_table(index = ['bd'], columns = ['backend'], values = '
 
 cmap = plt.get_cmap('plasma')
 
-ax = bdf_bybackend.plot.barh(figsize=(9,7), color = [cmap(ii/4) for ii in range(5) ] )
+ax = bdf_bybackend.plot.barh(figsize=(9,7), color = [cmap(ii/4) for ii in range(5) ])
 ax.legend(loc='upper right', title=r"$\chi$", ncol=3)
 ax.set_xlabel(r"time per iteration [$s/it$]")
+plt.tight_layout()
 if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bench-by-backend.svg', transparent=True)
 
 # %%
@@ -369,5 +368,35 @@ ax.set_xlabel(r"time per iteration [$s/it$]")
 ax.legend(loc='lower right', prop={'size': 22})
 plt.tight_layout()
 if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bench-by-bond.svg', transparent=True)
+
+
+
+# %% [markdown]
+# ## circuit bd test
+
+# %%
+files = [
+    #'benchmark/circuit_12-15_loss/dt1.2_bd10.npy',
+    'benchmark/circuit_12-15_loss/dt1.2_bd20.npy',
+    'benchmark/circuit_12-15_loss/dt1.2_bd40.npy',
+    'benchmark/circuit_12-15_loss/dt1.2_bd60.npy'
+]
+labels = ['20', '40', '60']
+
+bd_data = []
+for f in files:
+    bd_data.append( np.load(f) )
+
+for ii, curve in enumerate(bd_data):
+    plt.plot( np.linspace(0,1,len(curve)), curve, label="${}$".format(labels[ii]),
+              color = cmap((ii)/len(bd_data)), linewidth=2,
+    )
+
+plt.yscale('log')
+plt.legend()
+plt.title(r"circuit with Matcha ($N = 15, \delta t = 1.2$)")
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'circuit-bond.svg', transparent=True)
+
+
 
 # %%
