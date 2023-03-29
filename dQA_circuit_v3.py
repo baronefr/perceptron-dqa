@@ -239,7 +239,7 @@ if __name__== "__main__":
     dd = mydQA_circuit(csi_patterns, P = 100, dt = 0.7, backend = 'matcha_single_step')
 
     # run the simulation
-    loss = dd.run()
+    loss = dd.run(max_bond=10) # optionally set the max bond dimension
     print('final loss value: {}'.format(loss[-1]) )
 
     # TODO check loss len and format before plotting
