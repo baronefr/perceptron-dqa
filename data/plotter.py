@@ -291,7 +291,7 @@ files = [
     'benchmark/numpy_9-12_loss/dt0.1_bd60.npy',
     'benchmark/numpy_9-12_loss/dt0.1_bd80.npy',
 ]
-labels = [ '10', '20', '40', '60','80']
+labels = [ '10', '20', '40', '60', '80']
 
 bd_data = []
 for f in files:
@@ -333,6 +333,43 @@ plt.ylabel(r"$\varepsilon(s)$")
 plt.xlabel(r"$s$")
 plt.title('MPS')
 
+# %%
+
+mps_quimb = np.load('benchmark/quimb_9-12_loss_dt0.5_bd10.npy')
+
+plt.plot( np.linspace(0,1,len(mps_quimb)), mps_quimb, c='#fda85a', linewidth=3.4)
+plt.yscale('log')
+plt.ylabel(r"$\varepsilon(s)$")
+plt.xlabel(r"$s$")
+plt.title('MPS (Quimb)')
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'dqa_quimb_only.svg', transparent=True)
+
+
+
+# %% comparison dQA plots
+
+fig = plt.figure(figsize=(12,4))
+ax1 = fig.add_subplot(1, 2, 1)
+ax2 = fig.add_subplot(1, 2, 2, sharey=ax1)
+
+# plot dQA for both implementations
+l1 = ax1.plot( np.linspace(0,1,len(mps_quimb)), mps_quimb, label = 'MPS (quimb)', linewidth=3, c='#fda85a')
+r1 = ax2.plot( np.linspace(0,1,len(mps)), mps, label = 'MPS (jax)', linewidth=3, c='purple')
+
+# plot ED in both sides
+l0 = ax1.plot( np.linspace(0,1,len(ed)), ed, label = 'ED', linewidth=2, c = '#00a645', linestyle='--')
+ax2.plot( np.linspace(0,1,len(ed)), ed, linewidth=2, c = '#00a645', linestyle='--')
+
+plt.yscale('log')
+ax1.set_ylabel(r"$\varepsilon(s)$")
+ax1.set_xlabel(r"$s$")
+ax2.set_xlabel(r"$s$")
+fig.suptitle('dQA')
+
+lgd = fig.legend( loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=False, shadow=False, ncol=3)
+
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'dqa_comparison_12_05_100.svg',
+                           transparent=True, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 
@@ -350,10 +387,10 @@ bdf_bybond = bdata.pivot_table(index = ['bd'], columns = ['backend'], values = '
 
 cmap = plt.get_cmap('viridis')
 
-ax = bdf_bybackend.plot.barh(figsize=(9,7), 
+ax = bdf_bybackend.iloc[ reversed([3,0,2,4,1]) ].plot.barh(figsize=(9,7), 
         color = [cmap(ii/3) for ii in range(4) ]
 )
-ax.legend(loc='upper right', title=r"$\chi$", ncol=2)
+ax.legend(loc='lower right', title=r"$\chi$", ncol=2)
 ax.set_xlabel(r"time per iteration [$s/it$]")
 plt.tight_layout()
 if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bench-by-backend.svg', transparent=True)
@@ -379,12 +416,12 @@ if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bench-by-bond.svg', transparent=True)
 
 # %%
 files = [
-    #'benchmark/circuit_12-15_loss/dt1.2_bd10.npy',
+    'benchmark/circuit_12-15_loss/dt1.2_bd10.npy',
     'benchmark/circuit_12-15_loss/dt1.2_bd20.npy',
     'benchmark/circuit_12-15_loss/dt1.2_bd40.npy',
-    'benchmark/circuit_12-15_loss/dt1.2_bd60.npy'
+    #'benchmark/circuit_12-15_loss/dt1.2_bd60.npy'
 ]
-labels = ['20', '40', '60']
+labels = ['10', '20', '40', '60']
 
 bd_data = []
 for f in files:
@@ -397,10 +434,33 @@ for ii, curve in enumerate(bd_data):
 
 plt.yscale('log')
 plt.legend()
-plt.title(r"circuit with Matcha ($N = 15, \delta t = 1.2$)")
+plt.ylabel(r"$\varepsilon(s)$")
+plt.xlabel(r"$s$")
+#plt.title(r"circuit Matcha")
 plt.tight_layout()
 if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'circuit-bond.svg', transparent=True)
 
+
+
+# %% comparison with JAX
+
+matcha = np.load('benchmark/circuit_12-15_loss/dt1.2_bd20.npy')
+jaxloss = np.load('benchmark/numpy_12-15_loss_dt1.2_bd10.npy')
+
+plt.plot( np.linspace(0,1,len(jaxloss)), jaxloss, label="JAX MPS",
+              color = 'purple', linewidth=2,
+    )
+plt.plot( np.linspace(0,1,len(matcha)), matcha, label="Matcha",
+              color = '#00a645', linewidth=2,
+    )
+
+plt.yscale('log')
+plt.legend()
+plt.ylabel(r"$\varepsilon(s)$")
+plt.xlabel(r"$s$")
+#plt.title(r"circuit with Matcha")
+plt.tight_layout()
+if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'circuit-matcha-jax.svg', transparent=True)
 
 
 # %%
