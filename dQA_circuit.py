@@ -1,223 +1,254 @@
+#!/usr/bin/python3
+
+# ====================================================
+#  Quantum Information and Computing exam project
+#
+#   UNIPD Project |  AY 2022/23  |  QIC
+#   group : Barone, Coppi, Zinesi
+# ----------------------------------------------------
+#   > description                                    |
+#
+#   class setup of dQA execution
+# ----------------------------------------------------
+#   coder : Barone Francesco, Coppi Alberto, Zinesi Paolo
+#         :   github.com/baronefr/
+#   dated : 17 March 2023
+#     ver : 1.0.0
+# ====================================================
+
+# %%
 import numpy as np
 import matplotlib.pyplot as plt
 
-from qiskit import QuantumCircuit, QuantumRegister, AncillaRegister
-from qiskit.circuit.library import QFT, IntegerComparator
-from qiskit.visualization import plot_histogram
-from qiskit.quantum_info import Statevector
-
-from losstre import *
 from tqdm import trange
 
+from lib.HammingEvolution import *
+from lib.loss_tracker import *
+from lib.dQA_loss import *
 
-class HammingEvolution:
-    """
-    Class to generate all the modules of Heaviside evolution circuit consistently.
-    """
-    def __init__(self, num_data_qubits) -> None:
+import qtealeaves.observables as obs
+from qmatchatea import QCOperators, QCBackend
+from qmatchatea.utils import QCConvergenceParameters
+from qmatchatea.py_emulator import run_py_simulation
+from qmatchatea.qk_utils import qk_transpilation_params
+
+from qtealeaves.emulator import MPS
+
+# %%
+
+
+class mydQA_circuit:
+
+    def __init__(self, dataset : np.ndarray | str, 
+                 P : int, dt : float, 
+                 backend : str = 'qiskit') -> None:
         
-        # number of qubits, number ancillas used to count, number of ancillas used to compare Hamming distance
-        self.num_data_qubits = num_data_qubits
-        self.num_count_ancillas = int(np.ceil(np.log2(num_data_qubits+1)))
+        assert backend in ['qiskit', 'matcha', 'matcha_single_step'], 'not valid backend identifier'
 
-        # in this situation the comparison is really simple
-        self.simple_compare = (self.num_data_qubits + 1 == 2**self.num_count_ancillas)
-
-        # circuit initializer
-        self.data_qubits = QuantumRegister(self.num_data_qubits)
-        self.count_ancillas = AncillaRegister(self.num_count_ancillas)
-        self.qc = QuantumCircuit(self.data_qubits, self.count_ancillas)
-
-        # intialize comparison ancillas if necessary
-        if not self.simple_compare:
-            self.num_comp_ancillas = self.num_count_ancillas
-            self.comp_ancillas = AncillaRegister(self.num_count_ancillas)
-            self.qc.add_register(self.comp_ancillas)
-
-        # ancilla in which the Heaviside control will be stored
-        if self.simple_compare:
-            self.control_ancilla = self.count_ancillas[-1]
+        # retrieve dataset dimension and infer number of qubits
+        if isinstance(dataset, str):
+            self.dataset = np.load(dataset)
         else:
-            self.control_ancilla = self.comp_ancillas[0]
+            self.dataset = dataset
+        self.num_csi, self.num_data_qubits = dataset.shape
+
+        self.annealing_param = {'P' : P, 'dt' : dt}
+        self.backend = backend
+        self.qc_generator = HammingEvolution(num_data_qubits = self.num_data_qubits)
+
+        # link function to call for simulation execution
+        if backend == 'qiskit':
+            self.run = self._run_qiskit 
+        elif backend == 'matcha':
+            self.run = self._run_matcha
+        else:
+            self.run = self._run_matcha_stepbystep
 
 
-    def init_state_plus(self):
-        """
-        Generate a circuit where all the qubits are initialized at |+> = H|0> intead of simply |0>.
-        """
-
-        # return a new copy of the circuit, but with the same number of qubits for consistency
-        circ = self.qc.copy()
-
-        for iq in range(self.num_data_qubits):
-            circ.h(self.data_qubits[iq])
-
-        return circ
 
 
-    def Hamming_count(self, train_data):
-        """ 
-        Generate circuit of `self.num_data_qubits` qubits that counts the Hamming distance from the training data.
-        The count is stored in the `self.count_ancillas` qubits. 
-            - train_data: vector of training data.
+    def _run_qiskit(self, max_bond = None):
+        assert self.backend == 'qiskit', 'not valid backend! please use {}'.format(self.backend)
 
-            Conventions:
-            - (1,-1) <--> (|0>,|1>)
-            - little endians: least significant bit is the last one of the string
-        """
+        # retrieve simulation parameters
+        P, dt  = self.annealing_param['P'], self.annealing_param['dt']
 
-        assert len(train_data) == self.num_data_qubits, "Wrong dimension of training data"
+        # initialize the circuit
+        qc = self.qc_generator.init_state_plus()
 
-        # return a new copy of the circuit, but with the same number of qubits for consistency
-        circ = self.qc.copy()
+        # setting the loss tracker
+        self.loss_tracker = LossTracker( 
+            self.qc_generator.num_data_qubits, 
+            self.qc_generator.num_ancillas,
+            init_state=qc
+        )
+
+        for pp in trange(P):
+            s_p = (pp+1)/P
+            gamma_p = s_p*dt
+            beta_p = (1-s_p)*dt
+
+            qc = self.qc_generator.single_step_composer(qc, self.dataset, beta_p , gamma_p, tracking_function=self.loss_tracker.track)
+
+        self.loss = self.loss_tracker.get_edensity(self.dataset, little_endian=True)
+        return self.loss
 
 
-        # flip only when the training data is -1: in this way the circuit can simply count the number 
-        # of states that are |1>
-        # little endians convention is applied !!! train_data[::-1] !!!
-        for iq, train_data_i in enumerate(train_data[::-1]):
-            if train_data_i == -1:
-                circ.x(self.data_qubits[iq])
 
-        # initial Hadamards to create superposition in the counter register
-        for ia in range(self.num_count_ancillas):
-            circ.h(self.count_ancillas[ia])
+
+    def _run_matcha(self, max_bond = 10):
+        assert self.backend == 'matcha', 'not valid backend! please use {}'.format(self.backend)
+
+        # retrieve simulation parameters
+        P, dt  = self.annealing_param['P'], self.annealing_param['dt']
+
+        # initialize the circuit
+        qc = self.qc_generator.init_state_plus()
         
+        self.loss = []
+
+        # build the full circuit
+        for pp in trange(P, desc = 'composing the circuit '):
+            s_p = (pp+1)/P
+            gamma_p = s_p*dt
+            beta_p = (1-s_p)*dt
+
+            qc = self.qc_generator.single_step_composer(qc, self.dataset, beta_p, gamma_p)
         
-        # Phase estimation
-        for ia in range(self.num_count_ancillas):
-            # the order is from the lowest index of the ancilla to the highest
-            n_reps = 2**ia
+        # define matcha simulation observables and parameters
+        operators = QCOperators()
+        sigma_z = np.array([[1, 0], [0, -1]])
+        operators.ops["sz"] = sigma_z
+        observables = obs.TNObservables()
+        #observables += obs.TNObsBondEntropy()
+        observables += obs.TNState2File("state.txt", "C") # NOTE: mandatory to get the MPS in output dictionary
+        #observables += obs.TNObsLocal('label', 'sz')
+        conv_params = QCConvergenceParameters(max_bond_dimension=max_bond, singval_mode="C")
+        backend = QCBackend(backend="PY")
 
-            # repeat n_reps times the application of the unitary gate controlled on the ancillary qubit
-            for rep_idx in range(n_reps):
-                for iq in range(self.num_data_qubits):
-                    circ.cp(2*np.pi/2**self.num_count_ancillas, self.count_ancillas[ia], self.data_qubits[iq])
+        print('running matcha simulation')
+        res = run_py_simulation( qc,
+            convergence_parameters=conv_params,
+            operators=operators,
+            observables=observables,
+            transpilation_parameters = qk_transpilation_params(linearize=False),
+            backend=backend
+        )
 
+        self.final_state = res.observables["mps_state"]
 
-        # invert flip applied previously to count the number of |1>
-        # little endians convention is applied !!! train_data[::-1] !!!
-        for iq, train_data_i in enumerate(train_data[::-1]):
-            if train_data_i == -1:
-                circ.x(self.data_qubits[iq])
+        # from documentation -----------------
+        #   linearize: bool, optional
+        # If True use qiskit transpiler to linearize the circuit. Default to True.
+        #   basis_gates: list, optional
+        # If not empty decompose using qiskit transpiler into basis gate set
+        #   optimization: intger, optional
+        # Level of optimization in qiskit transpiler. Default to 3.
+        #  tensor_compiler: bool, optional
+        # If True, contract all the two-qubit gates before running the experiment.
+        # Default to True.
 
-        circ.barrier()
-        qft_circ = QFT(self.num_count_ancillas, inverse=True).decompose(reps=1)
+        print('computing loss')
+        loss_obj = mydQA_ancilla(self.dataset, P, dt, 
+            n_ancilla=self.qc_generator.num_count_ancillas,
+            flip_endian=True
+        )
+        self.loss.append( loss_obj.compute_loss( self.final_state ) )
 
-        circ = circ.compose(qft_circ, self.count_ancillas)
-
-        # add an additional comparison circuit if needed
-        if not self.simple_compare:
-            circ = circ.compose(IntegerComparator(self.num_count_ancillas, int(np.ceil(self.num_data_qubits/2.0)), geq=True).decompose(reps=1),
-                                qubits=list(self.count_ancillas)+list(self.comp_ancillas))
-
-        return circ
-
-
-    def U_z(self, train_data, gamma):
-        """
-        Generate circuit for Uz evolution according to the training data and the value of gamma.
-            - train_data: vector of training data.
-            - gamma: multiplicative float in the time evolution definition.
-
-            Conventions:
-            - (1,-1) <--> (|0>,|1>)
-            - little endians: least significant bit is the last one of the string
-        """
-        assert len(train_data) == self.num_data_qubits, "Wrong dimension of training data"
-
-        # return a new copy of the circuit, but with the same number of qubits for consistency
-        circ = self.qc.copy()
-        circ.barrier()
-
-        # define controlled operation on the 'ancilla_index'
-        # little endians convention is applied !!! iq and idata goes on opposite directions !!!
-        for iq, idata in zip(range(self.num_data_qubits),range(len(train_data)-1,-1,-1)):
-            circ.crz(-2*gamma*train_data[idata]/np.sqrt(self.num_data_qubits), self.control_ancilla, self.data_qubits[iq])
-
-        circ.barrier()
-        return circ
-
-
-    def U_x(self, beta):
-        """
-        Generate circuit for Ux evolution according to the value of beta.
-            - beta: multiplicative float in the time evolution definition.
-
-        """
-
-        # return a new copy of the circuit, but with the same number of qubits for consistency
-        circ = self.qc.copy()
-        circ.barrier()
-
-        for iq in range(self.num_data_qubits):
-            circ.rx(-2*beta, self.data_qubits[iq])
-
-        return circ
+        return self.loss
 
 
 
+
+
+
+    def _run_matcha_stepbystep(self, max_bond = 10):
+        assert self.backend == 'matcha_single_step', 'not valid backend! please use {}'.format(self.backend)
+
+        # retrieve simulation parameters
+        P, dt  = self.annealing_param['P'], self.annealing_param['dt']
+
+        # define matcha simulation observables and parameters
+        operators = QCOperators()
+        sigma_z = np.array([[1, 0], [0, -1]])
+        operators.ops["sz"] = sigma_z
+
+        # setting up loss tracker
+        loss_obj = mydQA_ancilla(self.dataset, P, dt, 
+            n_ancilla=self.qc_generator.num_count_ancillas,
+            flip_endian=True
+        )
+
+        self.loss = []
+        initial_state = None # save here the state (MPS) at each step
+
+        observables = obs.TNObservables()
+        #observables += obs.TNObsBondEntropy()
+        observables += obs.TNState2File("state.txt", "C")
+        #observables += obs.TNObsLocal('label', 'sz')
+        conv_params = QCConvergenceParameters(max_bond_dimension=max_bond, singval_mode="C")
+        backend = QCBackend(backend="PY")
+
+        # build the full circuit
+        for pp in trange(P, desc='execute dQA steps'):
+            s_p = (pp+1)/P
+            gamma_p = s_p*dt
+            beta_p = (1-s_p)*dt
+
+            qc = self.qc_generator.single_step_composer(
+                self.qc_generator.init_state_plus() if pp == 0 else None, 
+                self.dataset, beta_p, gamma_p
+            )
+
+            # simulation ref : https://quantum_matcha_tea.baltig-pages.infn.it/py_api_quantum_matcha_tea/chapters/py_emulator.html#qmatchatea.py_emulator.run_py_simulation
+            # INFO: requires the fix of matcha library!
+            #     
+            #   fix line 840 of file  qtealeaves.emulator.mps_simulator.py  as
+            # obj = cls(len(tensor_list), 0, conv_params, local_dim)
+            res = run_py_simulation( qc, 
+                convergence_parameters=conv_params,
+                operators=operators,
+                observables=observables,
+                initial_state = initial_state,
+                #transpilation_parameters = qk_transpilation_params(linearize=False),
+                backend=backend
+            )
+
+            initial_state = res.observables["mps_state"]
+            self.final_state = initial_state
+            self.loss.append( loss_obj.compute_loss( initial_state ) )
+
+        return self.loss
+
+
+
+
+
+# %%
 
 if __name__== "__main__":
 
-    # initializations
-    N_xi, N_features = 8, 10
-    csi_patterns = np.random.choice([1,-1], size=(N_xi, N_features))
-    labels = np.ones((N_xi, ))
+    # create a dummy dataset...
+    #N_xi, N_features = 12, 15
+    #csi_patterns = np.random.choice([1,-1], size=(N_xi, N_features))
 
-    # loop variables
-    P = 50
-    dt = 1
+    # ... or load it from file
+    csi_patterns = np.load('data/patterns_12-15.npy')
 
+    # crop dataset (optional)
+    #csi_patterns = csi_patterns[0:5,:]  
 
-    ################################
-    #### TESTING THE EVOLUTION #####
-    ################################
+    # initialize the dQA wrapper
+    dd = mydQA_circuit(csi_patterns, P = 100, dt = 1.2, backend = 'matcha_single_step')
 
-    # circuit generator
-    qc_generator = HammingEvolution(num_data_qubits=N_features)
+    # run the simulation
+    loss = dd.run(max_bond=10) # optionally set the max bond dimension
+    print('final loss value: {}'.format(loss[-1]) )
 
-    # actual circuit (in initial superposition)
-    qc = qc_generator.init_state_plus()
-
-    # track losses
-    mystates = []
-    mystates.append(get_statevec(qc, N_features))
-
-
-    # start "training"
-    for pp in trange(P):
-        s_p = (pp+1)/P
-        gamma_p = s_p*dt
-        beta_p = (1-s_p)*dt
-
-        for mu in range(N_xi):
-        
-            # create Hamming error counter circuit based on the given pattern
-            qc_counter = qc_generator.Hamming_count(train_data=csi_patterns[mu,:])
-            qc_counter_inverse = qc_counter.inverse()
-        
-            # create Uz evolution circuit
-            qc_Uz = qc_generator.U_z(train_data=csi_patterns[mu,:], gamma=gamma_p)
-        
-            # compose all circuits to evolve according to Uz
-            qc = qc.compose(qc_counter)
-            qc = qc.compose(qc_Uz)
-            qc = qc.compose(qc_counter_inverse)
-
-        # measure loss
-        mystates.append(get_statevec(qc, N_features))
-
-        # create and apply Ux evolution circuit
-        qc_Ux = qc_generator.U_x(beta_p)
-        qc = qc.compose(qc_Ux)
-
-    
-    # print final results and losses
-    finalstate = Statevector.from_instruction(qc)
-    plot_histogram(finalstate.probabilities_dict(), number_to_keep=2**N)
-    
-    loss = np.real_if_close(get_losses_from_sts(mystates, csi_patterns, labels, representation='same'))
     plt.plot(loss)
     plt.yscale('log')
-    
+    plt.show()
+
+
+# %%
+

@@ -1,0 +1,24 @@
+backend,bd,time
+quimb (CPU),10,0.66
+quimb (CPU),20,1.06
+quimb (CPU),40,1.36
+quimb (CPU),60,1.40
+quimb (torch),10,0.68
+quimb (torch),20,0.77
+quimb (torch),40,0.81
+quimb (torch),60,0.89
+numpy (CPU),10,0.45
+numpy (CPU),20,0.83
+numpy (CPU),40,2.23
+numpy (CPU),60,4.38
+numpy (CPU),80,5.47
+numpy (jit),10,0.27
+numpy (jit),20,0.45
+numpy (jit),40,2.15
+numpy (jit),60,4.97
+numpy (jit),80,7.03
+numpy (GPU),10,0.40
+numpy (GPU),20,0.51
+numpy (GPU),40,0.69
+numpy (GPU),60,0.86
+numpy (GPU),80,1.04
