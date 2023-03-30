@@ -20,7 +20,7 @@ import numpy as np
 import os
 from datetime import datetime
 
-from dQA_circuit_v3 import *
+from project.dQA_circuit import *
 
 # ----------------------
 #   TARGET DEFINITIONS
