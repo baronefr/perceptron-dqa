@@ -188,11 +188,11 @@ class mydQA():
 
 #    usage example:
 if __name__== "__main__":
-    dev = jax.devices('gpu')[0] # set preferred device (default is CPU)
-    obj = mydQA('test.npy', P = 100, dt = 0.3, max_bond=10, device=dev) #'data/patterns_9-12.npy'
+    dev = jax.devices('gpu')[0] # select device (default is CPU)
+    obj = mydQA('data/patterns_12-15.npy', P = 100, dt = 1.2, max_bond=10, device=dev)
 
     obj.init_fourier()
-    obj.run(skip_jit = 0)
+    obj.run(skip_jit = 0) # optional: skip jitting in first iterations
 
     obj.plot_loss().show()
 

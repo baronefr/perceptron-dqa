@@ -4,6 +4,19 @@ from tqdm import tqdm
 import qiskit.quantum_info as qi
 from qiskit import QuantumCircuit, QuantumRegister, AncillaRegister
 
+GPU = True
+from importlib.util import find_spec
+
+if GPU:
+    if find_spec('cupy') is not None:
+        import cupy as ncp
+    else:
+        print('Selected device is GPU but cupy is not installed, falling back to numpy')
+        import numpy as ncp
+else:
+    import numpy as ncp
+
+
 ####################################
 #### GET PERCEPTRON HAMILTONIAN ####
 ####################################
@@ -57,15 +70,25 @@ def H_perc_diag(data, labels):
         h_perc += ReLU(-labels[i]*op)
         del op
 
-    return (h_perc / np.sqrt(n)).astype('complex128')
+    return ncp.array((h_perc / np.sqrt(n)).astype('complex128'))
 
+
+
+########################
+##### LOSS TRACKER #####
+########################
 
 class LossTracker:
     def __init__(self, num_qubits, num_ancillae, init_state):
 
         self.n_qubits   = num_qubits
         self.n_ancillae = num_ancillae
-        self._statevecs = [qi.Statevector.from_instruction(init_state)]
+        if type(init_state) is qi.Statevector:
+            self._statevecs = [init_state]
+        elif type(init_state) is QuantumCircuit:
+            self._statevecs = [qi.Statevector.from_instruction(init_state)]
+        else:
+            print('type', type(init_state), 'of init_state is not valid')
         self._h_perc    = None
         self._little_endian = True
         self._statevecs_arr = None
@@ -97,9 +120,14 @@ class LossTracker:
        
         del self.current_qc
 
+    
     @property
     def statevecs(self):
         return self._statevecs
+    
+    @statevecs.setter
+    def set_statevecs(self, value):
+        self._statevecs = [value]
     
     @property
     def h_perc(self):
@@ -116,22 +144,29 @@ class LossTracker:
 
     def finalize(self):
 
-        # convert statevectors to arrays, keep only qubits of interest
+        ## convert statevectors to arrays, keep only qubits of interest
         arr_list = []
+        
         for state in tqdm(self._statevecs, desc='finalizing LossTracker'):
             out_red = qi.partial_trace(state, range(self.n_qubits, self.n_qubits + self.n_ancillae))
-            prob, st_all = np.linalg.eig(out_red.data)
-            idx    = np.argmax(prob) 
+            prob, st_all = ncp.linalg.eigh(ncp.array(out_red.data))
+            idx    = ncp.argmax(prob) 
             arr_list.append(st_all[:, idx].copy())
             del out_red, prob, st_all, idx
+        
+        self._statevecs_arr = ncp.stack(arr_list)
+        del arr_list
 
-        self._statevecs_arr = np.stack(arr_list)
-        del  arr_list
+    def finalize_opt(self):
+
+        ## instead of tracing outs qubit we can simply modify the hamiltonian by putting
+        ## identities on the ancillary qubits, remembering that qiskit uses little endians.
+        self._statevecs_arr = ncp.array(np.stack([state.data for state in self._statevecs]))
 
     def __loss(self, statevec, h_perc):
 
-        return np.vdot(statevec, h_perc * statevec)
-
+        return ncp.vdot(statevec, h_perc * statevec)
+    
     def get_losses(self, data, little_endian=True, labels=None):
 
         if len(self._statevecs) == 0:
@@ -156,14 +191,48 @@ class LossTracker:
                 self._h_perc = H_perc_diag(data[:,::-1], labels)
             self._little_endian = little_endian
            
+        result = ncp.real_if_close(ncp.apply_along_axis(self.__loss, axis=1, arr=self._statevecs_arr, h_perc=self._h_perc))
+        
+        if type(result) is np.ndarray:  return result
+        else:                           return result.get()
+
+    def get_losses_opt(self, data, little_endian=True, labels=None):
+
+        if len(self._statevecs) == 0:
+            print('Error: no statevectors has been tracked down, please call track() before')
+            return
+        
+        if labels is None:
+            labels = np.ones((data.shape[0],))
+        
+        if self._statevecs_arr is None:
+            print('LossTracker was not finalized, finalizing...')
+            self.finalize_opt()
+            print('Done!')
+            
+        if self._h_perc is None or self._little_endian != little_endian:
+
+            if little_endian:
+                self._h_perc = kronecker_prod([ncp.ones((2,))]*self.n_ancillae + [H_perc_diag(data, labels)])
+            else:
+                # invert data components if the circuit was constructed in big endian mode
+                # NOT SURE IF THIS WORKS
+                self._h_perc = kronecker_prod([ncp.ones((2,))]*self.n_ancillae + [H_perc_diag(data[:,::-1], labels)])
+            self._little_endian = little_endian
            
-        return np.real_if_close(np.apply_along_axis(self.__loss, axis=1, arr=self._statevecs_arr, h_perc=self._h_perc))
+        result = ncp.real_if_close(ncp.apply_along_axis(self.__loss, axis=1, arr=self._statevecs_arr, h_perc=self._h_perc))
+        
+        if type(result) is np.ndarray:  return result
+        else:                           return result.get()
     
-    def get_edensity(self, data, little_endian=True, labels=None):
+    def get_edensity(self, data, little_endian=True, opt=True, labels=None):
 
-        losses = self.get_losses(data, little_endian=little_endian, labels=labels)
-        e0 = np.real_if_close(np.sort(self._h_perc)[0])
-
+        if opt:
+            losses = self.get_losses_opt(data, little_endian=little_endian, labels=labels)
+        else:
+            losses = self.get_losses(data, little_endian=little_endian, labels=labels)
+        e0 = np.real_if_close(np.sort(self._h_perc if type(self._h_perc) is np.ndarray else self._h_perc.get())[0])
+        self.e0 = e0
         return (losses-e0) / data.shape[1]
     
 
