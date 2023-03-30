@@ -32,7 +32,7 @@ plt.rcParams['figure.figsize'] = (9,6)
 color_palette = ['#006ec2', '#ff7b00']
 
 FILE_PREFIX = '../img/'
-DO_SAVEFIG = True
+DO_SAVEFIG = False
 
 # %% utilities
 
@@ -340,6 +340,7 @@ plt.title('MPS')
 # ## execution time benchmarks
 
 bdata = pd.read_csv('benchmark/bench.csv')
+bdata = bdata[ bdata['bd'] != 80 ] # remove 80 from dataset
 bdf_bybackend = bdata.pivot_table(index = ['backend'], 
                       columns = ['bd'], values = 'time')
 bdf_bybond = bdata.pivot_table(index = ['bd'], columns = ['backend'], values = 'time')
@@ -347,10 +348,12 @@ bdf_bybond = bdata.pivot_table(index = ['bd'], columns = ['backend'], values = '
 
 # %%
 
-cmap = plt.get_cmap('plasma')
+cmap = plt.get_cmap('viridis')
 
-ax = bdf_bybackend.plot.barh(figsize=(9,7), color = [cmap(ii/4) for ii in range(5) ])
-ax.legend(loc='upper right', title=r"$\chi$", ncol=3)
+ax = bdf_bybackend.plot.barh(figsize=(9,7), 
+        color = [cmap(ii/3) for ii in range(4) ]
+)
+ax.legend(loc='upper right', title=r"$\chi$", ncol=2)
 ax.set_xlabel(r"time per iteration [$s/it$]")
 plt.tight_layout()
 if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bench-by-backend.svg', transparent=True)
@@ -359,7 +362,7 @@ if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'bench-by-backend.svg', transparent=Tru
 
 ax = bdf_bybond.plot.barh(figsize=(9,7), rot=0, 
                          color=['red', 'darkorange', 'gold', 'dodgerblue', 'deeppink'],
-                        edgecolor='white', linewidth=1, width=0.83
+                        edgecolor='white', linewidth=1, width=0.70
 )
 ax.set_ylabel(r"$\chi$")
 ax.set_xlabel(r"time per iteration [$s/it$]")
@@ -395,6 +398,7 @@ for ii, curve in enumerate(bd_data):
 plt.yscale('log')
 plt.legend()
 plt.title(r"circuit with Matcha ($N = 15, \delta t = 1.2$)")
+plt.tight_layout()
 if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'circuit-bond.svg', transparent=True)
 
 
