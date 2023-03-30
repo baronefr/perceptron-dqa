@@ -3,14 +3,36 @@
 <p align="center"><b>Project</b> // Barone Francesco, Coppi Alberto, Zinesi Paolo<br></p>
 
 
-TODO
+### In this repo
+
+```markdown
+├── data/            dataset and benchmarks
+├── img/             plots
+├── quimb-dqa/       first implementation of MPS dQA (with Quimb)
+│
+├─ dQA_mps.py        implementation of dQA with MPS (jax)
+└─ dQA_circuit.py    implementation of dQA with Matcha/Qiskit
+```
 
 
 ### Setup
 
-TODO
+Python requirements are listed in `requirements.txt`.
 
+**[Quantum Tea Leaves](https://baltig.infn.it/quantum_tea/quantum_tea)** and **Quantum Matcha Tea** are required to run the `dQA_circuit` implementation. To setup a custom environment, we suggest to take a look at the script `setup-env.sh`, as it should work in most cases.
 
+Our software has been tested with the following software version:
+```
+qiskit==0.38.0
+qmatchatea==0.4.7
+qtealeaves==0.4.15
+```
+
+Furthermore, in order to use the dQA circuit simulation via Matcha in step-by-step mode, it is necessary to hot-fix the Matcha library itself.
+```python
+#   fix line 840 of file  qtealeaves.emulator.mps_simulator.py  as
+obj = cls(len(tensor_list), 0, conv_params, local_dim)
+```
 
 <br><br>
 
