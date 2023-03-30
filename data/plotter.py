@@ -419,7 +419,7 @@ files = [
     'benchmark/circuit_12-15_loss/dt1.2_bd10.npy',
     'benchmark/circuit_12-15_loss/dt1.2_bd20.npy',
     'benchmark/circuit_12-15_loss/dt1.2_bd40.npy',
-    #'benchmark/circuit_12-15_loss/dt1.2_bd60.npy'
+    'benchmark/circuit_12-15_loss/dt1.2_bd60.npy'
 ]
 labels = ['10', '20', '40', '60']
 
@@ -429,7 +429,7 @@ for f in files:
 
 for ii, curve in enumerate(bd_data):
     plt.plot( np.linspace(0,1,len(curve)), curve, label="${}$".format(labels[ii]),
-              color = cmap((ii)/len(bd_data)), linewidth=2,
+              color = cmap((ii)/len(bd_data)), linewidth=3,
     )
 
 plt.yscale('log')
@@ -444,14 +444,14 @@ if DO_SAVEFIG: plt.savefig(FILE_PREFIX + 'circuit-bond.svg', transparent=True)
 
 # %% comparison with JAX
 
-matcha = np.load('benchmark/circuit_12-15_loss/dt1.2_bd20.npy')
+matcha = np.load('benchmark/circuit_12-15_loss/dt1.2_bd60.npy')
 jaxloss = np.load('benchmark/numpy_12-15_loss_dt1.2_bd10.npy')
 
 plt.plot( np.linspace(0,1,len(jaxloss)), jaxloss, label="JAX MPS",
-              color = 'purple', linewidth=2,
+              color = 'purple', linewidth=3,
     )
 plt.plot( np.linspace(0,1,len(matcha)), matcha, label="Matcha",
-              color = '#00a645', linewidth=2,
+              color = '#00a645', linewidth=3,
     )
 
 plt.yscale('log')

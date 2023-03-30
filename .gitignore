@@ -18,3 +18,8 @@ env.yml
 # external libraries
 lib/leaves*
 lib/matcha*
+
+# packing 
+.ignore
+README.html
+lib/README.html
