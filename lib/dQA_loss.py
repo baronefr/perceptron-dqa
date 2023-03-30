@@ -69,7 +69,7 @@ class mydQA_ancilla(mydQA):
         eps = 0.0
         for mu in range(self.N_xi):
             for kk in range(self.N+1):
-                mpo = Hz_mu_singleK_with_ancilla(self.N, mu, kk, self.fxft, self.dataset[:,::-1], self.n_ancilla)
+                mpo = Hz_mu_singleK_with_ancilla(self.N, mu, kk, self.fxft, self.dataset, self.n_ancilla)
 
                 psiH = apply_mpsmpo(psi, mpo)
 

@@ -231,12 +231,15 @@ if __name__== "__main__":
     # create a dataset...
     #N_xi, N_features = 12, 15
     #csi_patterns = np.random.choice([1,-1], size=(N_xi, N_features))
+
     # ... or load it from file
     csi_patterns = np.load('data/patterns_12-15.npy')
-    #csi_patterns = csi_patterns[0:5,:]  # crop dataset (optional)
+
+    # crop dataset (optional)
+    #csi_patterns = csi_patterns[0:5,:]  
 
     # initialize the dQA wrapper
-    dd = mydQA_circuit(csi_patterns, P = 100, dt = 0.7, backend = 'matcha_single_step')
+    dd = mydQA_circuit(csi_patterns, P = 100, dt = 1.2, backend = 'matcha_single_step')
 
     # run the simulation
     loss = dd.run(max_bond=10) # optionally set the max bond dimension
