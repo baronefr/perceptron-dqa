@@ -14,6 +14,7 @@ env.yml
 
 # tmp and cache
 **/__pycache__/**
+__pycache__/
 
 # external libraries
 lib/leaves*
