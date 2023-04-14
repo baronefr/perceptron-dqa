@@ -27,7 +27,7 @@ Eventually, we propose a **circuit** to execute the **discretized QA** on a quan
 <p align="center">
   <img src="img/circuit-general.png" alt="" height="300"/>
   <br>
-  <img src="img/circuit-uz.png" alt="" height="300"/>
+  <img src="img/circuit-uz.png" alt=""/>
 </p>
 
 
