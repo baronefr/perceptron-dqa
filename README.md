@@ -36,6 +36,7 @@ Eventually, we propose a **circuit** to execute the **discretized QA** on a quan
 
 ```markdown
 ├── data/            dataset and benchmarks
+├── exact-diag/      QA with exact diagonalization
 ├── img/             plots
 ├── quimb-dqa/       first implementation of MPS dQA (with Quimb)
 │
@@ -67,7 +68,7 @@ obj = cls(len(tensor_list), 0, conv_params, local_dim)
 
 ## Bibliography
 
-* G. Lami et al. **"Quantum Annealing for Neural Network optimization problems: a new approach via Tensor Network simulations"**, in SciPost Physics, 2022 ([submitted](https://arxiv.org/abs/2208.14468))
+* G. Lami et al. **"Quantum Annealing for Neural Network optimization problems: a new approach via Tensor Network simulations"**, in SciPost Physics, 2022 ([arxiv:2208.14468](https://arxiv.org/abs/2208.14468))
 
 ---
 
