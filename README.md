@@ -5,7 +5,7 @@
 In this work, we explore the paradigmatic **perceptron model** for binary classification in a quantum computing context. The minimization of the cost function is performed using **Quantum Annealing** (QA), which is one of the most promising frameworks for quantum optimization.
 
 Following the work of [G. Lami et al](https://arxiv.org/abs/2208.14468) (2022), we address the minimization of the complex classical cost function of a *quantum* perceptron model, i.e. we focus on the Hamiltonian
-$H = \sum_\mu \Theta(-\xi^\mu\cdot\sigma)\frac{-\xi^\mu\cdot\sigma}{\sqrt{N}}$, where ${{ \xi^\mu : \mu = 1,...,N_\xi }}$ is a set of $N_\xi$ binary patterns $\xi^\mu \in {{-1,+1}}^N$.
+$H = \sum_\mu \Theta(-\xi^\mu\cdot\sigma)\frac{-\xi^\mu\cdot\sigma}{\sqrt{N}}$, where ${{ \xi^\mu : \mu = 1,...,N_\xi }}$ is a set of $N_\xi$ binary patterns $\xi^\mu \in \left\{-1,+1\right\}^N$.
 
 As shown in [G. Lami et al](https://arxiv.org/abs/2208.14468), the adiabatic time evolution of QA can be efficiently represented as Matrix Product Operators in a **Tensor Network** framework. Such representation allows for simple classical simulations, well-beyond small sizes amenable to exact diagonalization techniques. Indeed, **discretizing** the QA dynamics (**dQA**) into $P$ steps, we can evolve the initial state towards an optimized Matrix Product State (MPS).
 
